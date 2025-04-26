@@ -17,7 +17,7 @@
   "author": "Aakash Tripathi",
   "license": "MIT",
   "dependencies": {
-    "astro": "^2.0.0"
+    "astro": "^4.16.18"
   },
   "devDependencies": {
     "eslint": "^8.0.0",
