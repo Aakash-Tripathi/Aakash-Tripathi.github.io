@@ -1,10 +1,34 @@
 ---
-title: "Aakash Tripathi's Portfolio"
-description: "Welcome to the personal research portfolio of Aakash Tripathi, showcasing education, publications, and research interests."
+interface Props {
+  title: string;
+  subtitle?: string;
+}
+
+const { title, subtitle } = Astro.props;
 ---
 
-<header>
-  <h1>Aakash Tripathi</h1>
-  <p>Ph.D. Candidate in Electrical Engineering</p>
-  <p>Conducting Multimodal Medical Research at <a href="https://lab.moffitt.org/Rasool/">Moffitt Cancer Center</a></p>
+<header class="header">
+  <div class="container">
+    <h1>{title}</h1>
+    {subtitle && <p class="subtitle">{subtitle}</p>}
+  </div>
 </header>
+
+<style>
+  .header {
+    background-color: var(--color-secondary);
+    color: white;
+    padding: 4rem 0;
+    text-align: center;
+  }
+
+  h1 {
+    margin-bottom: 0.5rem;
+    font-size: 2.5rem;
+  }
+
+  .subtitle {
+    font-size: 1.25rem;
+    opacity: 0.8;
+  }
+</style>

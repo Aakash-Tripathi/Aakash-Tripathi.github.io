@@ -1,16 +1,27 @@
 ---
-const { Astro } = require('astro');
+interface Props {
+  title: string;
+  id?: string;
+}
 
-const SectionContainer = ({ title, children }) => {
-  return (
-    <section class="section-container">
-      <h2>{title}</h2>
-      <div class="section-content">
-        {children}
-      </div>
-    </section>
-  );
-};
-
-export default SectionContainer;
+const { title, id } = Astro.props;
 ---
+
+<section class="section" id={id}>
+  <div class="container">
+    <h2 class="section-title">{title}</h2>
+    <div class="section-content">
+      <slot />
+    </div>
+  </div>
+</section>
+
+<style>
+  .section-title {
+    margin-bottom: 2rem;
+    color: var(--color-secondary);
+    border-bottom: 2px solid var(--color-primary);
+    display: inline-block;
+    padding-bottom: 0.5rem;
+  }
+</style>

@@ -7,7 +7,6 @@ Welcome to the portfolio website of Aakash Tripathi, a Ph.D. candidate conductin
 The project is organized as follows:
 
 ```
-aakash-portfolio
 ├── public
 │   ├── favicon.svg          # Favicon for the website
 │   └── assets
@@ -42,39 +41,3 @@ aakash-portfolio
 ├── tsconfig.json             # TypeScript configuration file
 └── README.md                 # Project documentation
 ```
-
-## Getting Started
-
-To run this project locally, follow these steps:
-
-1. Clone the repository:
-   ```
-   git clone https://github.com/Aakash-Tripathi/aakash-portfolio.git
-   ```
-
-2. Navigate to the project directory:
-   ```
-   cd aakash-portfolio
-   ```
-
-3. Install the dependencies:
-   ```
-   npm install
-   ```
-
-4. Start the development server:
-   ```
-   npm run dev
-   ```
-
-5. Open your browser and visit `http://localhost:3000` to view the portfolio.
-
-## Deployment
-
-This project is configured to be deployed on GitHub Pages. The deployment process is automated using GitHub Actions. Upon pushing changes to the main branch, the website will be automatically built and deployed.
-
-## Acknowledgments
-
-Special thanks to Moffitt Cancer Center for the opportunity to conduct research and to all collaborators and mentors who have supported my journey.
-
-For more information, please visit my [GitHub](https://github.com/lab-rasool) and [Hugging Face](https://huggingface.co/Lab-Rasool) profiles.

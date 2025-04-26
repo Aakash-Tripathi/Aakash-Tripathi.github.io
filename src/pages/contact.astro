@@ -1,35 +1,83 @@
 ---
-layout: ../../layouts/Layout.astro
-
-title: "Contact Aakash Tripathi"
-
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import SectionContainer from '../components/SectionContainer.astro';
 ---
 
-<section class="contact">
-  <h1>Contact Me</h1>
-  <p>If you would like to get in touch, feel free to reach out via email or connect with me on social media.</p>
+<Layout title="Contact - Aakash Tripathi">
+  <Header title="Contact" subtitle="Get in touch" />
   
-  <h2>Email</h2>
-  <p><a href="mailto:aakash.tripathi@example.com">aakash.tripathi@example.com</a></p>
+  <SectionContainer title="Contact Information">
+    <div class="contact-content">
+      <div class="contact-text">
+        <p>
+          Thank you for your interest in my research. Please feel free to reach out through any of the following channels:
+        </p>
+        
+        <div class="contact-links">
+          <div class="contact-item">
+            <h3>Professional Profiles</h3>
+            <ul>
+              <li><a href="https://github.com/lab-rasool" target="_blank">GitHub (Lab-Rasool)</a></li>
+              <li><a href="https://huggingface.co/Lab-Rasool" target="_blank">Hugging Face (Lab-Rasool)</a></li>
+              <li><a href="https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en" target="_blank">Google Scholar</a></li>
+              <li><a href="https://orcid.org/0000-0001-7231-0487" target="_blank">ORCID: 0000-0001-7231-0487</a></li>
+            </ul>
+          </div>
+          
+          <div class="contact-item">
+            <h3>Affiliation</h3>
+            <p>
+              College of Engineering<br>
+              University of South Florida<br>
+              Tampa, FL, USA
+            </p>
+            <p>
+              Research conducted at:<br>
+              <a href="https://lab.moffitt.org/Rasool/" target="_blank">Rasool Lab</a><br>
+              Moffitt Cancer Center
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </SectionContainer>
+</Layout>
+
+<style>
+  .contact-content {
+    max-width: 800px;
+    margin: 0 auto;
+  }
   
-  <h2>Social Media</h2>
-  <ul>
-    <li><a href="https://github.com/Aakash-Tripathi">GitHub</a></li>
-    <li><a href="https://twitter.com/Aakash_Tripathi">Twitter</a></li>
-    <li><a href="https://linkedin.com/in/aakash-tripathi">LinkedIn</a></li>
-  </ul>
+  .contact-text {
+    font-size: 1.1rem;
+  }
   
-  <h2>Contact Form</h2>
-  <form action="https://formspree.io/f/{your-form-id}" method="POST">
-    <label for="name">Name:</label>
-    <input type="text" id="name" name="name" required>
-    
-    <label for="email">Email:</label>
-    <input type="email" id="email" name="email" required>
-    
-    <label for="message">Message:</label>
-    <textarea id="message" name="message" required></textarea>
-    
-    <button type="submit">Send Message</button>
-  </form>
-</section>
+  .contact-links {
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+  
+  .contact-item h3 {
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+  }
+  
+  .contact-item ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .contact-item li {
+    margin-bottom: 0.5rem;
+  }
+  
+  @media (max-width: 768px) {
+    .contact-links {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

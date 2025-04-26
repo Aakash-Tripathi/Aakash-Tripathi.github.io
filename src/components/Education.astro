@@ -1,4 +1,5 @@
 ---
+import { education } from "../data/education";
 title: "Education"
 ---
 
@@ -13,16 +14,16 @@ title: "Education"
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td>Ph.D. in Electrical Engineering</td>
-        <td>College of Engineering, University of South Florida</td>
-        <td>2022.09 – Present</td>
-      </tr>
-      <tr>
-        <td>B.S. in Electrical and Computer Engineering</td>
-        <td>Henry M. Rowan College of Engineering, Rowan University</td>
-        <td>2018.09 – 2022.06</td>
-      </tr>
+      {education.map((item) => (
+        <tr>
+          <td><strong>{item.degree}</strong></td>
+          <td>{item.institution}</td>
+          <td>
+            {new Date(item.startDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit' }).replace(/\//g, '.')} – 
+            {item.present ? <em>Present</em> : new Date(item.endDate).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit' }).replace(/\//g, '.')}
+          </td>
+        </tr>
+      ))}
     </tbody>
   </table>
 </section>

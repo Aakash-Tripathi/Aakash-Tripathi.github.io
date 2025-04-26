@@ -1,17 +1,72 @@
 ---
-import publications from '../data/publications.js';
-
+import { journalArticles, abstracts, preprints, presentations } from "../data/publications";
 ---
 
-<section>
-  <h2>Publications</h2>
-  <ul>
-    {publications.map(pub => (
-      <li>
-        <strong>{pub.title}</strong> - {pub.journal} ({pub.year})  
-        <br />
-        <a href={pub.link} target="_blank" rel="noopener noreferrer">View Publication</a>
-      </li>
-    ))}
-  </ul>
-</section>
+<div class="publications">
+  <h3>🎤 Presentations</h3>
+  {presentations.map((item) => (
+    <div class="publication-item">
+      <h4>{item.title}</h4>
+      <p><em>{item.venue}</em></p>
+      <div class="publication-links">
+        {item.links.map((link) => (
+          <a href={link.url} target="_blank" rel="noopener noreferrer">{link.name}</a>
+        ))}
+      </div>
+    </div>
+  ))}
+
+  <h3>📝 Journal Articles</h3>
+  {journalArticles.map((item) => (
+    <div class="publication-item">
+      <h4>{item.title}</h4>
+      <p>
+        <em>{item.journal}</em> {item.volume && item.volume}{item.pages && ", " + item.pages} ({item.year}).
+      </p>
+      <p>{item.authors}</p>
+      <a href={item.url} target="_blank" rel="noopener noreferrer">DOI: {item.doi}</a>
+    </div>
+  ))}
+
+  <h3>🧩 Abstracts</h3>
+  {abstracts.map((item) => (
+    <div class="publication-item">
+      <h4>{item.title}</h4>
+      <p>
+        <em>{item.journal}</em> {item.volume && item.volume}{item.pages && ", " + item.pages} ({item.year}).
+      </p>
+      <p>{item.authors}</p>
+      <a href={item.url} target="_blank" rel="noopener noreferrer">DOI: {item.doi}</a>
+    </div>
+  ))}
+
+  <h3>🧪 Preprints</h3>
+  {preprints.map((item) => (
+    <div class="publication-item">
+      <h4>{item.title}</h4>
+      <p>
+        <em>{item.journal}</em> {item.year && "(" + item.year + ")"}
+      </p>
+      <p>{item.authors}</p>
+      <a href={item.url} target="_blank" rel="noopener noreferrer">{item.url.includes("arxiv") ? item.journal : "Preprint DOI: " + item.doi}</a>
+    </div>
+  ))}
+</div>
+
+<style>
+  .publications h3 {
+    margin-top: 2rem;
+    margin-bottom: 1.5rem;
+    color: var(--color-secondary);
+  }
+  
+  .publication-item h4 {
+    margin-bottom: 0.5rem;
+  }
+  
+  .publication-links {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 1rem;
+  }
+</style>

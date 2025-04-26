@@ -1,15 +1,25 @@
 ---
-layout: ../layouts/PublicationLayout.astro
-title: Aakash Tripathi's Publications
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import SectionContainer from '../components/SectionContainer.astro';
+import Publications from '../components/Publications.astro';
 ---
 
-<Header />
+<Layout title="Publications - Aakash Tripathi">
+  <Header title="Publications" subtitle="Academic contributions and research papers" />
+  
+  <SectionContainer title="Research Publications">
+    <p class="section-links">
+      View complete list on 
+      <a href="https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en" target="_blank">Google Scholar</a> | 
+      <a href="https://orcid.org/0000-0001-7231-0487" target="_blank">ORCID</a>
+    </p>
+    <Publications />
+  </SectionContainer>
+</Layout>
 
-<Navbar />
-
-<SectionContainer>
-  <h1>Publications</h1>
-  <Publications />
-</SectionContainer>
-
-<Footer />
+<style>
+  .section-links {
+    margin-bottom: 2rem;
+  }
+</style>

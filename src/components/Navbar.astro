@@ -2,33 +2,71 @@
 layout: Layout.astro
 ---
 
-<nav>
-  <ul>
-    <li><a href="/">Home</a></li>
-    <li><a href="/publications">Publications</a></li>
-    <li><a href="/research">Research</a></li>
-    <li><a href="/contact">Contact</a></li>
-  </ul>
+<nav class="navbar">
+  <div class="container">
+    <div class="navbar-content">
+      <div class="navbar-logo">
+        <a href="/">Aakash Tripathi</a>
+      </div>
+      <ul class="navbar-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/publications">Publications</a></li>
+        <li><a href="/research">Research</a></li>
+        <li><a href="/contact">Contact</a></li>
+      </ul>
+    </div>
+  </div>
 </nav>
 
 <style>
-  nav {
-    background-color: #333;
-    padding: 1rem;
+  .navbar {
+    background-color: var(--color-background);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
-  
-  nav ul {
-    list-style: none;
+
+  .navbar-content {
     display: flex;
-    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
   }
-  
-  nav a {
-    color: white;
-    text-decoration: none;
+
+  .navbar-logo a {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-secondary);
   }
-  
-  nav a:hover {
-    text-decoration: underline;
+
+  .navbar-links {
+    display: flex;
+    list-style: none;
+    gap: 2rem;
+  }
+
+  .navbar-links a {
+    color: var(--color-text);
+    font-weight: 500;
+  }
+
+  .navbar-links a:hover {
+    color: var(--color-primary);
+  }
+
+  @media (max-width: 768px) {
+    .navbar-content {
+      flex-direction: column;
+      padding: 1rem 0;
+    }
+
+    .navbar-logo {
+      margin-bottom: 0.5rem;
+    }
+
+    .navbar-links {
+      gap: 1rem;
+    }
   }
 </style>

@@ -1,34 +1,115 @@
 ---
-layout: ../layouts/Layout.astro
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import SectionContainer from '../components/SectionContainer.astro';
+---
 
-<title>Aakash Tripathi - Research</title>
+<Layout title="Research - Aakash Tripathi">
+  <Header title="Research Interests" subtitle="Exploring multimodal medical research" />
+  
+  <SectionContainer title="Research Focus">
+    <div class="research-content">
+      <div class="research-area">
+        <h3>Multimodal Medical Research</h3>
+        <p>
+          My research focuses on developing advanced AI methods for integrating and analyzing multimodal medical data. 
+          Working at Moffitt Cancer Center, I specialize in creating scalable frameworks that combine various data types
+          to improve cancer diagnosis, prognosis, and treatment planning.
+        </p>
+      </div>
+      
+      <div class="research-area">
+        <h3>AI in Oncology</h3>
+        <p>
+          I develop deep learning models specifically designed for oncology applications, including survival prediction,
+          treatment outcome forecasting, and biomarker discovery. My work includes foundation models and self-normalizing
+          networks for multi-omics data analysis.
+        </p>
+      </div>
+      
+      <div class="research-area">
+        <h3>Clinical Data Extraction</h3>
+        <p>
+          I work on creating AI systems that can automatically extract structured information from unstructured clinical documents
+          like pathology reports, enabling more efficient data processing for cancer registries and research databases.
+        </p>
+      </div>
+    </div>
+  </SectionContainer>
+  
+  <SectionContainer title="Current Projects">
+    <div class="projects">
+      <div class="project-card">
+        <h3>HoneyBee</h3>
+        <p>
+          A scalable modular framework for creating multimodal oncology datasets with foundational embedding models.
+          This platform enables seamless integration of diverse data types for comprehensive cancer research.
+        </p>
+        <a href="https://arxiv.org/abs/2405.07460" target="_blank" class="btn">Learn More</a>
+      </div>
+      
+      <div class="project-card">
+        <h3>Self-Normalizing Foundation Models</h3>
+        <p>
+          Developing self-normalizing neural networks for enhanced multi-omics data analysis in oncology,
+          improving the ability to discover biomarkers and predict patient outcomes.
+        </p>
+        <a href="https://arxiv.org/abs/2405.08226" target="_blank" class="btn">Learn More</a>
+      </div>
+    </div>
+  </SectionContainer>
+</Layout>
 
-<Header />
-
-<Navbar />
-
-<SectionContainer>
-  <h1>Research Interests</h1>
-  <p>
-    My research focuses on multimodal data integration in oncology, leveraging advanced machine learning techniques to enhance cancer research and treatment outcomes. I am particularly interested in the following areas:
-  </p>
-  <ul>
-    <li>AI-driven multimodal data integration</li>
-    <li>Deep learning applications in healthcare</li>
-    <li>Time-series analysis for medical data</li>
-    <li>Feature selection techniques for predictive modeling</li>
-    <li>Development of scalable oncology datasets</li>
-  </ul>
-
-  <h2>Current Projects</h2>
-  <p>
-    I am currently involved in several projects aimed at improving cancer research methodologies through innovative data analysis techniques. Some of these projects include:
-  </p>
-  <ul>
-    <li>SeNMo: A Self-Normalizing Deep Learning Model for Enhanced Multi-Omics Data Analysis in Oncology</li>
-    <li>PARADIGM: An Embeddings-Based Multimodal Learning Framework with Foundation Models and Graph Neural Networks</li>
-    <li>HONeYBEE: Enabling Scalable Multimodal AI in Oncology Through Foundation Model-Driven Embeddings</li>
-  </ul>
-</SectionContainer>
-
-<Footer />
+<style>
+  .research-area {
+    margin-bottom: 2rem;
+  }
+  
+  .research-area h3 {
+    color: var(--color-primary);
+    margin-bottom: 0.75rem;
+  }
+  
+  .projects {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+  
+  .project-card {
+    background-color: var(--color-light);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .project-card h3 {
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+  }
+  
+  .project-card p {
+    margin-bottom: 1.5rem;
+  }
+  
+  .btn {
+    display: inline-block;
+    background-color: var(--color-primary);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+  }
+  
+  .btn:hover {
+    background-color: #0051bb;
+    text-decoration: none;
+  }
+  
+  @media (max-width: 768px) {
+    .projects {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

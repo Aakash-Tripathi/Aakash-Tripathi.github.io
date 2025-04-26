@@ -1,29 +1,148 @@
 ---
-layout: ../layouts/Layout.astro
-
-title: Aakash Tripathi - Research Portfolio
-
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import SectionContainer from '../components/SectionContainer.astro';
+import Education from '../components/Education.astro';
+import Publications from '../components/Publications.astro';
 ---
 
-<Header />
+<Layout title="Aakash Tripathi - Research Portfolio">
+  <div class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1>Aakash Tripathi</h1>
+          <p class="subtitle">Ph.D. Candidate</p>
+          <p class="description">
+            Conducting Multimodal Medical Research at <a href="https://lab.moffitt.org/Rasool/" target="_blank">Moffitt Cancer Center</a>.
+          </p>
+          <div class="hero-links">
+            <a href="https://github.com/lab-rasool" target="_blank" class="btn">GitHub</a>
+            <a href="https://huggingface.co/Lab-Rasool" target="_blank" class="btn">Hugging Face</a>
+            <a href="https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en" target="_blank" class="btn">Google Scholar</a>
+            <a href="https://orcid.org/0000-0001-7231-0487" target="_blank" class="btn">ORCID</a>
+          </div>
+        </div>
+        <div class="hero-image">
+          <img src="/assets/profile-photo.jpg" alt="Aakash Tripathi" />
+        </div>
+      </div>
+    </div>
+  </div>
 
-<Navbar />
+  <SectionContainer title="Education" id="education">
+    <Education />
+  </SectionContainer>
 
-<SectionContainer>
-  <h1>Welcome to My Research Portfolio</h1>
-  <p>
-    I am Aakash Tripathi, a Ph.D. candidate conducting multimodal medical research at the Moffitt Cancer Center. My work focuses on integrating artificial intelligence with medical data to enhance cancer research and patient outcomes.
-  </p>
-  <img src="/assets/profile-photo.jpg" alt="Aakash Tripathi" />
-</SectionContainer>
+  <SectionContainer title="Publications" id="publications">
+    <p class="section-links">
+      View complete list on 
+      <a href="https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en" target="_blank">Google Scholar</a> | 
+      <a href="https://orcid.org/0000-0001-7231-0487" target="_blank">ORCID</a>
+    </p>
+    <Publications />
+    <p class="read-more">
+      <a href="/publications" class="btn btn-secondary">View All Publications</a>
+    </p>
+  </SectionContainer>
+</Layout>
 
-<SectionContainer>
-  <h2>Explore My Work</h2>
-  <ul>
-    <li><a href="/publications">Publications</a></li>
-    <li><a href="/research">Research Interests</a></li>
-    <li><a href="/contact">Contact Me</a></li>
-  </ul>
-</SectionContainer>
+<style>
+  .hero {
+    background-color: var(--color-light);
+    padding: 4rem 0;
+  }
 
-<Footer />
+  .hero-content {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .hero-text {
+    flex: 1;
+  }
+
+  .hero-image {
+    flex: 1;
+    text-align: center;
+  }
+
+  .hero-image img {
+    max-width: 300px;
+    border-radius: 50%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  h1 {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+  }
+
+  .description {
+    font-size: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .hero-links {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-block;
+    background-color: var(--color-primary);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn:hover {
+    background-color: #0051bb;
+    text-decoration: none;
+  }
+
+  .btn-secondary {
+    background-color: transparent;
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-primary);
+    color: white;
+  }
+
+  .section-links {
+    margin-bottom: 2rem;
+  }
+
+  .read-more {
+    margin-top: 2rem;
+    text-align: center;
+  }
+
+  @media (max-width: 768px) {
+    .hero-content {
+      flex-direction: column-reverse;
+    }
+
+    .hero-image img {
+      max-width: 200px;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+    }
+  }
+</style>
