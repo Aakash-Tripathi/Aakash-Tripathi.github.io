@@ -1,0 +1,16 @@
+---
+const { Astro } = require('astro');
+
+const SectionContainer = ({ title, children }) => {
+  return (
+    <section class="section-container">
+      <h2>{title}</h2>
+      <div class="section-content">
+        {children}
+      </div>
+    </section>
+  );
+};
+
+export default SectionContainer;
+---

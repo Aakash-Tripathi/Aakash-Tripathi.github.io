@@ -1,0 +1,26 @@
+{
+  "name": "aakash-portfolio",
+  "version": "1.0.0",
+  "description": "A personal research portfolio website for Aakash Tripathi, showcasing education, publications, and research interests.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "keywords": [
+    "portfolio",
+    "research",
+    "Aakash Tripathi",
+    "Astro"
+  ],
+  "author": "Aakash Tripathi",
+  "license": "MIT",
+  "dependencies": {
+    "astro": "^2.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "prettier": "^2.0.0"
+  }
+}
