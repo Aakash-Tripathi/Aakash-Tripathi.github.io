@@ -1,9 +1,12 @@
 ---
-layout: Layout.astro
-title: Publications
+// Import the Layout component properly
+import Layout from '../layouts/Layout.astro';
+const { title = "Publications" } = Astro.props;
 ---
 
-<section class="publications">
-  <h1>Publications</h1>
-  <slot />
-</section>
+<Layout title={title}>
+  <section class="publications">
+    <h1>Publications</h1>
+    <slot />
+  </section>
+</Layout>
