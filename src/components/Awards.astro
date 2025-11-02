@@ -1,5 +1,21 @@
 ---
 import { awards, memberships, citations } from "../data/awards";
+import { fetchCitationCount } from "../utils/googleScholar";
+
+// Fetch citation count at build time
+const fetchedCount = await fetchCitationCount();
+
+// Use fetched count if available, otherwise fallback to hardcoded value
+const citationData = {
+  total: fetchedCount || citations.total,
+  period: citations.period,
+  lastUpdated: new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }),
+  isFetched: fetchedCount !== null
+};
 ---
 
 <section class="awards">
@@ -28,7 +44,12 @@ import { awards, memberships, citations } from "../data/awards";
 
   <h2>📊 Research Impact</h2>
   <div class="impact">
-    <p><strong>Total Citations:</strong> {citations.total} ({citations.period})</p>
+    <p><strong>Total Citations:</strong> {citationData.total} ({citationData.period})</p>
+    {citationData.isFetched ? (
+      <p class="last-updated">Last updated: {citationData.lastUpdated}</p>
+    ) : (
+      <p class="last-updated">From last manual update</p>
+    )}
   </div>
 </section>
 
@@ -64,5 +85,12 @@ import { awards, memberships, citations } from "../data/awards";
   .impact p {
     margin: 0;
     font-size: 1.1rem;
+  }
+
+  .last-updated {
+    margin-top: 0.5rem !important;
+    font-size: 0.9rem !important;
+    color: var(--text-secondary, #6b7280);
+    font-style: italic;
   }
 </style>
