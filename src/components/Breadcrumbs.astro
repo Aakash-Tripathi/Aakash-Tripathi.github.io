@@ -1,0 +1,85 @@
+---
+import StructuredData from './StructuredData.astro';
+
+export interface Props {
+  items: Array<{
+    name: string;
+    url?: string;
+  }>;
+}
+
+const { items } = Astro.props;
+const siteUrl = "https://Aakash-Tripathi.github.io";
+
+// Create BreadcrumbList schema
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": items.map((item, index) => ({
+    "@type": "ListItem",
+    "position": index + 1,
+    "name": item.name,
+    ...(item.url && { "item": `${siteUrl}${item.url}` })
+  }))
+};
+---
+
+<StructuredData data={breadcrumbSchema} />
+
+<nav aria-label="Breadcrumb" class="breadcrumbs">
+  <ol>
+    {items.map((item, index) => (
+      <li>
+        {index < items.length - 1 ? (
+          <>
+            <a href={item.url}>{item.name}</a>
+            <span class="separator">/</span>
+          </>
+        ) : (
+          <span aria-current="page">{item.name}</span>
+        )}
+      </li>
+    ))}
+  </ol>
+</nav>
+
+<style>
+  .breadcrumbs {
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+
+  .breadcrumbs ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .breadcrumbs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .breadcrumbs a {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .breadcrumbs a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumbs span[aria-current="page"] {
+    color: var(--color-text);
+  }
+
+  .separator {
+    color: var(--color-text);
+    opacity: 0.5;
+  }
+</style>

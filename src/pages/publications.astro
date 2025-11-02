@@ -3,9 +3,77 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import SectionContainer from '../components/SectionContainer.astro';
 import Publications from '../components/Publications.astro';
+import StructuredData from '../components/StructuredData.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import { journalArticles, abstracts, preprints } from '../data/publications.js';
+
+// Helper function to create ScholarlyArticle schema
+function createScholarlyArticleSchema(pub, type = 'ScholarlyArticle') {
+  const authorList = pub.authors.split(', ').map(name => {
+    const isMe = name.includes('Aakash Tripathi');
+    return {
+      "@type": "Person",
+      "name": name.replace(' and ', ''),
+      ...(isMe && {
+        "@id": "https://Aakash-Tripathi.github.io/#person",
+        "sameAs": [
+          "https://www.linkedin.com/in/aakash-tripathi/",
+          "https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en",
+          "https://orcid.org/0000-0001-7231-0487"
+        ]
+      })
+    };
+  });
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": type,
+    "headline": pub.title,
+    "name": pub.title,
+    "author": authorList,
+    "datePublished": `${pub.year}`,
+    "publisher": {
+      "@type": "Organization",
+      "name": pub.journal
+    }
+  };
+
+  if (pub.doi) {
+    schema.identifier = [
+      {
+        "@type": "PropertyValue",
+        "propertyID": "DOI",
+        "value": pub.doi
+      }
+    ];
+    schema.url = pub.url;
+  } else if (pub.url) {
+    schema.url = pub.url;
+  }
+
+  if (pub.volume) schema.volumeNumber = pub.volume;
+  if (pub.pages) schema.pagination = pub.pages;
+
+  return schema;
+}
+
+// Create schema for all publications
+const publicationSchemas = [
+  ...journalArticles.map(pub => createScholarlyArticleSchema(pub, 'ScholarlyArticle')),
+  ...abstracts.map(pub => createScholarlyArticleSchema(pub, 'ScholarlyArticle')),
+  ...preprints.map(pub => createScholarlyArticleSchema(pub, 'ScholarlyArticle'))
+];
 ---
 
+{publicationSchemas.map(schema => <StructuredData data={schema} />)}
+
 <Layout title="Publications - Aakash Tripathi">
+  <div class="container">
+    <Breadcrumbs items={[
+      { name: "Home", url: "/" },
+      { name: "Publications" }
+    ]} />
+  </div>
   <Header title="Publications" subtitle="Academic contributions and research papers" />
   
   <SectionContainer title="Research Publications">

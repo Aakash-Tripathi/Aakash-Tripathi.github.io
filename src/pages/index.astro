@@ -6,7 +6,113 @@ import Education from '../components/Education.astro';
 import Experience from '../components/Experience.astro';
 import Awards from '../components/Awards.astro';
 import Publications from '../components/Publications.astro';
+import StructuredData from '../components/StructuredData.astro';
+
+// Person Schema.org structured data for Google Knowledge Panel
+const personSchema = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": "https://Aakash-Tripathi.github.io/#person",
+  "name": "Aakash Tripathi",
+  "givenName": "Aakash",
+  "familyName": "Tripathi",
+  "honorificSuffix": "Ph.D.",
+  "jobTitle": "Machine Learning Engineer",
+  "description": "Machine Learning Engineer specializing in multimodal medical AI research and deep learning frameworks for oncology data integration",
+  "url": "https://Aakash-Tripathi.github.io",
+  "image": "https://Aakash-Tripathi.github.io/assets/profile-photo.jpg",
+  "email": "Aakash.Tripathi@moffitt.org",
+  "telephone": "+1-404-234-8483",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Tampa",
+    "addressRegion": "FL",
+    "addressCountry": "US"
+  },
+  "affiliation": {
+    "@type": "Organization",
+    "@id": "https://www.moffitt.org/#organization",
+    "name": "H. Lee Moffitt Cancer Center and Research Institute",
+    "url": "https://www.moffitt.org",
+    "department": {
+      "@type": "Organization",
+      "name": "Department of Machine Learning"
+    }
+  },
+  "alumniOf": [
+    {
+      "@type": "CollegeOrUniversity",
+      "name": "University of South Florida",
+      "url": "https://www.usf.edu",
+      "sameAs": "https://en.wikipedia.org/wiki/University_of_South_Florida"
+    },
+    {
+      "@type": "CollegeOrUniversity",
+      "name": "Rowan University",
+      "url": "https://www.rowan.edu",
+      "sameAs": "https://en.wikipedia.org/wiki/Rowan_University"
+    }
+  ],
+  "memberOf": [
+    {
+      "@type": "Organization",
+      "name": "IEEE Eta Kappa Nu (IEEE-HKN) Honors Society",
+      "url": "https://hkn.ieee.org"
+    },
+    {
+      "@type": "Organization",
+      "name": "Institute of Electrical and Electronics Engineers (IEEE)",
+      "url": "https://www.ieee.org",
+      "sameAs": "https://en.wikipedia.org/wiki/Institute_of_Electrical_and_Electronics_Engineers"
+    }
+  ],
+  "award": [
+    "Best Poster Award - 2024 Dr. Robert Gillies Machine Learning Workshop in Cancer ($1,000)",
+    "2nd Position - Moffitt Cancer Center Annual Bio-Data Club Hackathon (2024)",
+    "Graduate Assistantship Award - University of South Florida (2022-2025)",
+    "Dean's List - Rowan University (2018-2022)"
+  ],
+  "knowsAbout": [
+    "Machine Learning",
+    "Artificial Intelligence",
+    "Deep Learning",
+    "Medical AI",
+    "Multimodal Data Integration",
+    "Oncology Research",
+    "Computer Vision",
+    "Natural Language Processing",
+    "Foundation Models",
+    "Cancer Research"
+  ],
+  "sameAs": [
+    "https://www.linkedin.com/in/aakash-tripathi/",
+    "https://www.researchgate.net/profile/Aakash-Tripathi-2",
+    "https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en",
+    "https://orcid.org/0000-0001-7231-0487",
+    "https://github.com/lab-rasool",
+    "https://huggingface.co/Lab-Rasool"
+  ],
+  "identifier": [
+    {
+      "@type": "PropertyValue",
+      "propertyID": "ORCID",
+      "value": "0000-0001-7231-0487"
+    },
+    {
+      "@type": "PropertyValue",
+      "propertyID": "Google Scholar",
+      "value": "7X57fGgAAAAJ"
+    }
+  ],
+  "worksFor": {
+    "@type": "Organization",
+    "name": "H. Lee Moffitt Cancer Center and Research Institute",
+    "url": "https://www.moffitt.org"
+  }
+};
 ---
+
+<StructuredData data={personSchema} />
 
 <Layout title="Aakash Tripathi - Research Portfolio">
   <div class="hero">
@@ -19,6 +125,8 @@ import Publications from '../components/Publications.astro';
             Department of Machine Learning, <a href="https://lab.moffitt.org/Rasool/" target="_blank">H. Lee Moffitt Cancer Center and Research Institute</a>
           </p>
           <div class="hero-links">
+            <a href="https://www.linkedin.com/in/aakash-tripathi/" target="_blank" class="btn">LinkedIn</a>
+            <a href="https://www.researchgate.net/profile/Aakash-Tripathi-2" target="_blank" class="btn">ResearchGate</a>
             <a href="https://github.com/lab-rasool" target="_blank" class="btn">GitHub</a>
             <a href="https://huggingface.co/Lab-Rasool" target="_blank" class="btn">Hugging Face</a>
             <a href="https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en" target="_blank" class="btn">Google Scholar</a>

@@ -2,9 +2,16 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import SectionContainer from '../components/SectionContainer.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
 ---
 
 <Layout title="Research - Aakash Tripathi">
+  <div class="container">
+    <Breadcrumbs items={[
+      { name: "Home", url: "/" },
+      { name: "Research" }
+    ]} />
+  </div>
   <Header title="Research Interests" subtitle="Exploring multimodal medical research" />
   
   <SectionContainer title="Research Focus">

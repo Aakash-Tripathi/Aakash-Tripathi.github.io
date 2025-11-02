@@ -2,9 +2,16 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import SectionContainer from '../components/SectionContainer.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
 ---
 
 <Layout title="Contact - Aakash Tripathi">
+  <div class="container">
+    <Breadcrumbs items={[
+      { name: "Home", url: "/" },
+      { name: "Contact" }
+    ]} />
+  </div>
   <Header title="Contact" subtitle="Get in touch" />
   
   <SectionContainer title="Contact Information">
@@ -18,6 +25,8 @@ import SectionContainer from '../components/SectionContainer.astro';
           <div class="contact-item">
             <h3>Professional Profiles</h3>
             <ul>
+              <li><a href="https://www.linkedin.com/in/aakash-tripathi/" target="_blank">LinkedIn</a></li>
+              <li><a href="https://www.researchgate.net/profile/Aakash-Tripathi-2" target="_blank">ResearchGate</a></li>
               <li><a href="https://github.com/lab-rasool" target="_blank">GitHub (Lab-Rasool)</a></li>
               <li><a href="https://huggingface.co/Lab-Rasool" target="_blank">Hugging Face (Lab-Rasool)</a></li>
               <li><a href="https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en" target="_blank">Google Scholar</a></li>
