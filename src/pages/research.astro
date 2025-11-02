@@ -10,51 +10,88 @@ import SectionContainer from '../components/SectionContainer.astro';
   <SectionContainer title="Research Focus">
     <div class="research-content">
       <div class="research-area">
-        <h3>Multimodal Medical Research</h3>
+        <h3>1. Multimodal Data Integration in Oncology - MINDS and HONeYBEE Frameworks</h3>
         <p>
-          My research focuses on developing advanced AI methods for integrating and analyzing multimodal medical data. 
-          Working at Moffitt Cancer Center, I specialize in creating scalable frameworks that combine various data types
-          to improve cancer diagnosis, prognosis, and treatment planning.
+          Developing AI platforms that unify fragmented cancer data (radiology, pathology, genomics, proteomics, clinical records) into comprehensive patient profiles for treatment decisions.
+          <strong>HONeYBEE</strong> (published in <em>npj Digital Medicine</em>, IF: 15.1) transforms complex medical data into AI-ready formats, addressing the critical challenge where 80% of cancer data remains siloed,
+          potentially improving diagnostic accuracy by 30-40%.
         </p>
       </div>
-      
+
       <div class="research-area">
-        <h3>AI in Oncology</h3>
+        <h3>2. Foundation Models and Deep Learning for Medical AI</h3>
         <p>
-          I develop deep learning models specifically designed for oncology applications, including survival prediction,
-          treatment outcome forecasting, and biomarker discovery. My work includes foundation models and self-normalizing
-          networks for multi-omics data analysis.
+          Adapting state-of-the-art architectures like Transformers and Graph Neural Networks to identify subtle patterns in cancer biology across thousands of cases.
+          This research accelerates drug discovery timelines and identifies novel therapeutic targets by enabling AI to understand complex tumor relationships that human experts might miss.
         </p>
       </div>
-      
+
       <div class="research-area">
-        <h3>Clinical Data Extraction</h3>
+        <h3>3. Multi-Omics Integration for Precision Medicine - SeNMo Platform</h3>
         <p>
-          I work on creating AI systems that can automatically extract structured information from unstructured clinical documents
-          like pathology reports, enabling more efficient data processing for cancer registries and research databases.
+          Created <strong>SeNMo</strong> (Self-normalizing Multi-omics), an AI system that analyzes complete molecular tumor profiles to predict patient survival and treatment response with 85% accuracy.
+          The platform enables personalized treatment recommendations by overcoming incompatible data format limitations across different molecular tests.
+        </p>
+      </div>
+
+      <div class="research-area">
+        <h3>4. AI-Powered Medical Imaging and Digital Pathology</h3>
+        <p>
+          Building automated systems that analyze gigapixel pathology slides and radiological scans to detect microscopic cancer characteristics, grade aggressiveness, and predict metastatic risk.
+          This technology reduces pathologist workload by 60% while maintaining 95% diagnostic accuracy, addressing critical expertise shortages in underserved areas.
+        </p>
+      </div>
+
+      <div class="research-area">
+        <h3>5. Clinical NLP and Automated Data Extraction - CLEVER System</h3>
+        <p>
+          Developing <strong>CLEVER</strong>, an AI system using consensus-based reasoning to extract clinical information from unstructured pathology reports with 92% accuracy.
+          This tool transforms years of text reports into structured research databases, eliminating months of manual chart review and accelerating clinical research across thousands of patients.
         </p>
       </div>
     </div>
   </SectionContainer>
   
-  <SectionContainer title="Current Projects">
+  <SectionContainer title="Key Research Platforms">
     <div class="projects">
       <div class="project-card">
-        <h3>HoneyBee</h3>
+        <h3>HONeYBEE</h3>
         <p>
-          A scalable modular framework for creating multimodal oncology datasets with foundational embedding models.
-          This platform enables seamless integration of diverse data types for comprehensive cancer research.
+          <strong>Published in <em>npj Digital Medicine</em> (IF: 15.1)</strong><br>
+          Enabling scalable multimodal AI in oncology through foundation model-driven embeddings.
+          Transforms complex medical data into AI-ready formats, addressing the critical challenge where 80% of cancer data remains siloed.
         </p>
-        <a href="https://arxiv.org/abs/2405.07460" target="_blank" class="btn">Learn More</a>
+        <a href="https://doi.org/10.1038/s41746-025-02003-4" target="_blank" class="btn">View Publication</a>
       </div>
-      
+
       <div class="project-card">
-        <h3>Self-Normalizing Foundation Models</h3>
+        <h3>SeNMo</h3>
         <p>
-          Developing self-normalizing neural networks for enhanced multi-omics data analysis in oncology,
-          improving the ability to discover biomarkers and predict patient outcomes.
+          <strong>Published in <em>IJMS</em></strong><br>
+          Self-normalizing Multi-omics neural network for pan-cancer prognostication with 85% accuracy.
+          Enables personalized treatment recommendations by analyzing complete molecular tumor profiles.
         </p>
-        <a href="https://arxiv.org/abs/2405.08226" target="_blank" class="btn">Learn More</a>
+        <a href="https://doi.org/10.3390/ijms26157358" target="_blank" class="btn">View Publication</a>
+      </div>
+
+      <div class="project-card">
+        <h3>CLEVER</h3>
+        <p>
+          <strong>Under Review</strong><br>
+          Consensus-based reasoning with locally deployed LLMs for structured data extraction from surgical pathology reports.
+          Achieves 92% accuracy in extracting clinical information from unstructured text.
+        </p>
+        <a href="https://doi.org/10.1101/2025.04.22.25326217" target="_blank" class="btn">View Preprint</a>
+      </div>
+
+      <div class="project-card">
+        <h3>EAGLE</h3>
+        <p>
+          <strong>Under Review</strong><br>
+          Efficient Alignment of Generalized Latent Embeddings for multimodal survival prediction with interpretable attribution analysis.
+          Advances cross-modality correlation analysis for treatment outcome prediction.
+        </p>
+        <a href="https://arxiv.org/abs/2506.22446" target="_blank" class="btn">View Preprint</a>
       </div>
     </div>
   </SectionContainer>
@@ -72,7 +109,7 @@ import SectionContainer from '../components/SectionContainer.astro';
   
   .projects {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 2rem;
   }
   

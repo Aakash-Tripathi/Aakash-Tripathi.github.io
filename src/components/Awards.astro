@@ -1,0 +1,68 @@
+---
+import { awards, memberships, citations } from "../data/awards";
+---
+
+<section class="awards">
+  <h2>🏆 Honors & Awards</h2>
+  <div class="awards-list">
+    {awards.map((award) => (
+      <div class="award-item">
+        <h3>{award.title}</h3>
+        <p><strong>{award.organization}</strong> ({award.year})</p>
+        <p>{award.description}</p>
+        {award.prize && <p><em>Award: {award.prize}</em></p>}
+        {award.date && <p><em>{award.date}</em></p>}
+      </div>
+    ))}
+  </div>
+
+  <h2>🎓 Professional Memberships</h2>
+  <div class="memberships-list">
+    {memberships.map((membership) => (
+      <div class="membership-item">
+        <p><strong>{membership.organization}</strong></p>
+        <p>{membership.role} • {membership.startDate} – {membership.present ? 'Present' : membership.endDate}</p>
+      </div>
+    ))}
+  </div>
+
+  <h2>📊 Research Impact</h2>
+  <div class="impact">
+    <p><strong>Total Citations:</strong> {citations.total} ({citations.period})</p>
+  </div>
+</section>
+
+<style>
+  .awards-list, .memberships-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 1rem;
+  }
+
+  .award-item, .membership-item {
+    border-left: 3px solid var(--accent-color, #3b82f6);
+    padding-left: 1rem;
+  }
+
+  .award-item h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+  }
+
+  .award-item p, .membership-item p {
+    margin: 0.25rem 0;
+  }
+
+  .impact {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--bg-secondary, #f3f4f6);
+    border-radius: 8px;
+  }
+
+  .impact p {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+</style>

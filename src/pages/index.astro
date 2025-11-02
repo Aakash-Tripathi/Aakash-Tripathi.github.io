@@ -3,6 +3,8 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import SectionContainer from '../components/SectionContainer.astro';
 import Education from '../components/Education.astro';
+import Experience from '../components/Experience.astro';
+import Awards from '../components/Awards.astro';
 import Publications from '../components/Publications.astro';
 ---
 
@@ -11,10 +13,10 @@ import Publications from '../components/Publications.astro';
     <div class="container">
       <div class="hero-content">
         <div class="hero-text">
-          <h1>Aakash Tripathi</h1>
-          <p class="subtitle">Ph.D. Candidate</p>
+          <h1>Aakash Tripathi, Ph.D.</h1>
+          <p class="subtitle">Machine Learning Engineer</p>
           <p class="description">
-            Conducting Multimodal Medical Research at <a href="https://lab.moffitt.org/Rasool/" target="_blank">Moffitt Cancer Center</a>.
+            Department of Machine Learning, <a href="https://lab.moffitt.org/Rasool/" target="_blank">H. Lee Moffitt Cancer Center and Research Institute</a>
           </p>
           <div class="hero-links">
             <a href="https://github.com/lab-rasool" target="_blank" class="btn">GitHub</a>
@@ -32,6 +34,14 @@ import Publications from '../components/Publications.astro';
 
   <SectionContainer title="Education" id="education">
     <Education />
+  </SectionContainer>
+
+  <SectionContainer title="Experience" id="experience">
+    <Experience />
+  </SectionContainer>
+
+  <SectionContainer title="Honors & Awards" id="awards">
+    <Awards />
   </SectionContainer>
 
   <SectionContainer title="Publications" id="publications">

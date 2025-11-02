@@ -28,14 +28,21 @@ import SectionContainer from '../components/SectionContainer.astro';
           <div class="contact-item">
             <h3>Affiliation</h3>
             <p>
-              College of Engineering<br>
-              University of South Florida<br>
-              Tampa, FL, USA
+              Department of Machine Learning<br>
+              H. Lee Moffitt Cancer Center and Research Institute<br>
+              12902 Magnolia Drive<br>
+              Tampa, FL 33612, USA
+            </p>
+          </div>
+
+          <div class="contact-item">
+            <h3>Contact Details</h3>
+            <p>
+              <strong>Email:</strong> <a href="mailto:Aakash.Tripathi@moffitt.org">Aakash.Tripathi@moffitt.org</a><br>
+              <strong>Phone:</strong> (404) 234-8483
             </p>
             <p>
-              Research conducted at:<br>
-              <a href="https://lab.moffitt.org/Rasool/" target="_blank">Rasool Lab</a><br>
-              Moffitt Cancer Center
+              <a href="https://lab.moffitt.org/Rasool/" target="_blank">Rasool Lab</a>
             </p>
           </div>
         </div>
@@ -57,7 +64,7 @@ import SectionContainer from '../components/SectionContainer.astro';
   .contact-links {
     margin-top: 2rem;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 2rem;
   }
   
