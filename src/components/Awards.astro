@@ -37,7 +37,7 @@ const citationData = {
     {memberships.map((membership) => (
       <div class="membership-item">
         <p><strong>{membership.organization}</strong></p>
-        <p>{membership.role} • {membership.startDate} – {membership.present ? 'Present' : membership.endDate}</p>
+        <p>{membership.role} • {membership.startDate} – {membership.present ? 'Present' : 'Past'}</p>
       </div>
     ))}
   </div>
