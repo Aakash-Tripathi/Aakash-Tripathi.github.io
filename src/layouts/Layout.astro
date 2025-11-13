@@ -9,18 +9,20 @@ export interface Props {
   image?: string;
   author?: string;
   type?: string;
+  keywords?: string;
 }
 
 const {
   title,
   description = "Aakash Tripathi's research portfolio showcasing education, publications, and research in multimodal medical AI and deep learning for oncology.",
-  image = "https://Aakash-Tripathi.github.io/assets/profile-photo.jpg",
+  image = "https://aakash-tripathi.github.io/assets/profile-photo.jpg",
   author = "Aakash Tripathi",
-  type = "website"
+  type = "website",
+  keywords = "Aakash Tripathi, medical AI, multimodal AI, deep learning, oncology, cancer research, computational pathology, precision medicine, multi-omics, machine learning, HONeYBEE, SeNMo, CLEVER, EAGLE, Moffitt Cancer Center, digital pathology, clinical NLP, foundation models, transformers, graph neural networks"
 } = Astro.props;
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
-const siteUrl = "https://Aakash-Tripathi.github.io";
+const siteUrl = "https://aakash-tripathi.github.io";
 ---
 
 <!DOCTYPE html>
@@ -36,6 +38,7 @@ const siteUrl = "https://Aakash-Tripathi.github.io";
     <meta name="title" content={title} />
     <meta name="description" content={description} />
     <meta name="author" content={author} />
+    <meta name="keywords" content={keywords} />
     <link rel="canonical" href={canonicalURL} />
 
     <!-- Open Graph / Facebook -->
@@ -58,6 +61,7 @@ const siteUrl = "https://Aakash-Tripathi.github.io";
     <meta name="robots" content="index, follow" />
     <meta name="language" content="English" />
     <meta name="revisit-after" content="7 days" />
+    <meta name="google-site-verification" content="google4f18f8eacc8abdf9" />
   </head>
   <body>
     <Navbar />

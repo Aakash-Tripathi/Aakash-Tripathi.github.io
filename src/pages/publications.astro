@@ -15,7 +15,7 @@ function createScholarlyArticleSchema(pub, type = 'ScholarlyArticle') {
       "@type": "Person",
       "name": name.replace(' and ', ''),
       ...(isMe && {
-        "@id": "https://Aakash-Tripathi.github.io/#person",
+        "@id": "https://aakash-tripathi.github.io/#person",
         "sameAs": [
           "https://www.linkedin.com/in/aakash-tripathi/",
           "https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en",
@@ -67,7 +67,10 @@ const publicationSchemas = [
 
 {publicationSchemas.map(schema => <StructuredData data={schema} />)}
 
-<Layout title="Publications - Aakash Tripathi">
+<Layout
+  title="Publications - Aakash Tripathi"
+  description="Academic publications and research papers by Aakash Tripathi, focusing on multimodal medical AI, deep learning for oncology, and computational pathology. View peer-reviewed journal articles, conference abstracts, and preprints."
+>
   <div class="container">
     <Breadcrumbs items={[
       { name: "Home", url: "/" },
