@@ -8,7 +8,7 @@ The project is organized as follows:
 
 ```
 ├── public
-│   ├── favicon.svg          # Favicon for the website
+│   ├── favicon.svg           # Favicon for the website
 │   └── assets
 │       └── profile-photo.jpg # Profile photo of Aakash Tripathi
 ├── src
@@ -23,21 +23,21 @@ The project is organized as follows:
 │   │   ├── Layout.astro      # Main layout for the pages
 │   │   └── PublicationLayout.astro # Layout for the publications page
 │   ├── pages
-│   │   ├── index.astro       # Main landing page
+│   │   ├── index.astro        # Main landing page
 │   │   ├── publications.astro # Publications page
 │   │   ├── research.astro     # Research interests page
 │   │   └── contact.astro      # Contact information page
 │   ├── data
-│   │   ├── education.js      # Educational background data
+│   │   ├── education.js       # Educational background data
 │   │   ├── publications.js    # Publications data
-│   │   └── presentations.js    # Presentations data
+│   │   └── presentations.js   # Presentations data
 │   └── styles
-│       └── global.css        # Global styles for the website
+│       └── global.css         # Global styles for the website
 ├── .github
 │   └── workflows
-│       └── deploy.yml        # GitHub Actions workflow for deployment
-├── astro.config.mjs          # Astro project configuration
-├── package.json              # npm configuration file
-├── tsconfig.json             # TypeScript configuration file
-└── README.md                 # Project documentation
+│       └── deploy.yml         # GitHub Actions workflow for deployment
+├── astro.config.mjs           # Astro project configuration
+├── package.json               # npm configuration file
+├── tsconfig.json              # TypeScript configuration file
+└── README.md                  # Project documentation
 ```
