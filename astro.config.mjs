@@ -34,8 +34,15 @@ export default defineConfig({
   base: '/',
   output: 'static',
   redirects: {
-    '/research': '/selected-work/',
-    '/publications': '/selected-work/',
+    '/publications': '/research/',
+    '/selected-work': '/research/',
+    '/competencies': '/cv/',
+    '/blog/honeybee': '/blog/research/honeybee/',
+    '/blog/clever': '/blog/research/clever/',
+    '/blog/eagle': '/blog/research/eagle/',
+    '/blog/minds': '/blog/research/minds/',
+    '/blog/senmo': '/blog/research/senmo/',
+    '/blog/hetmoe': '/blog/research/hetmoe/',
     '/projects': '/blog/',
   },
   markdown: {
@@ -49,28 +56,6 @@ export default defineConfig({
   },
   integrations: [
     mdx(),
-    sitemap({
-      serialize(item) {
-        item.lastmod = new Date();
-        const path = new URL(item.url).pathname;
-        if (path === '/') {
-          item.priority = 1.0;
-          item.changefreq = 'monthly';
-        } else if (path.startsWith('/blog')) {
-          item.priority = 0.9;
-          item.changefreq = 'monthly';
-        } else if (path.startsWith('/selected-work')) {
-          item.priority = 0.9;
-          item.changefreq = 'weekly';
-        } else if (path.startsWith('/contact')) {
-          item.priority = 0.5;
-          item.changefreq = 'yearly';
-        } else {
-          item.priority = 0.7;
-          item.changefreq = 'monthly';
-        }
-        return item;
-      },
-    }),
+    sitemap(),
   ],
 });

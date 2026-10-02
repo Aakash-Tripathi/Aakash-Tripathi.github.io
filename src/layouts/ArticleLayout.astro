@@ -3,16 +3,17 @@ import 'katex/dist/katex.min.css';
 import { Image, getImage } from 'astro:assets';
 import Layout from './Layout.astro';
 import StructuredData from '../components/StructuredData.astro';
-import { getProjects, formatDate, isMe } from '../lib/projects.js';
+import { getProjects, formatDate, isMe, categories } from '../lib/projects.js';
 import { cover } from '../lib/images.js';
 
 const { frontmatter: fm, headings = [] } = Astro.props;
-const slug = Astro.url.pathname.split('/').filter(Boolean).pop();
+const [, category, slug] = Astro.url.pathname.split('/').filter(Boolean);
+const categoryLabel = categories.find((c) => c.id === category)?.label ?? category;
 const toc = headings.filter((h) => h.depth <= 3 && h.slug !== 'footnote-label');
 
-const coverImg = cover(slug);
+const coverImg = cover(`${category}/${slug}`);
 const ogImage = coverImg ? (await getImage({ src: coverImg, width: 1200, format: 'png' })).src : undefined;
-const projects = await getProjects();
+const projects = await getProjects(category);
 const index = projects.findIndex((p) => p.slug === slug);
 const prev = index > 0 ? projects[index - 1] : undefined;
 const next = index >= 0 && index < projects.length - 1 ? projects[index + 1] : undefined;
@@ -23,6 +24,9 @@ const schema = {
   headline: fm.title,
   description: fm.description,
   url: new URL(Astro.url.pathname, Astro.site).href,
+  mainEntityOfPage: new URL(Astro.url.pathname, Astro.site).href,
+  ...(fm.published && { datePublished: fm.published }),
+  ...(ogImage && { image: new URL(ogImage, Astro.site).href }),
   author: { '@id': 'https://aakash-tripathi.github.io/#person', '@type': 'Person', name: 'Aakash Tripathi' },
   keywords: fm.tags?.join(', '),
   ...(fm.doi && {
@@ -41,14 +45,14 @@ const schema = {
   <article class="article">
     <header class="article-hero">
       <p class="eyebrow">
-        <a href="/blog/">Blog</a> · {fm.short}{fm.minutesRead && <> · {fm.minutesRead} min read</>}
+        <a href="/blog/">Blog</a> · <a href={`/blog/${category}/`}>{categoryLabel}</a> · {fm.short}{fm.minutesRead && <> · {fm.minutesRead} min read</>}
       </p>
       <h1 class="article-title" data-long={fm.title.length > 70 ? '' : undefined}>{fm.title}</h1>
       {fm.subtitle && <p class="article-dek">{fm.subtitle}</p>}
       {
         coverImg && (
           <figure class="article-cover">
-            <div class="article-cover__frame">
+            <div class="article-cover__frame" style={fm.coverBg ? `background: ${fm.coverBg}` : undefined}>
               <Image src={coverImg} alt={fm.coverAlt ?? `Lead figure from ${fm.paperTitle ?? fm.title}`} widths={[720, 1080, 1600, 2000]} sizes="(min-width: 1100px) 1040px, 100vw" loading="eager" />
             </div>
             {fm.coverCaption && <figcaption set:html={fm.coverCaption} />}
@@ -92,7 +96,7 @@ const schema = {
           <dt>Published</dt>
           <dd>
             {fm.venue && <em>{fm.venue}</em>}
-            {fm.published && <span class="muted"> · {formatDate(fm.published)}</span>}
+            {fm.published && <span class="muted">{fm.venue ? " · " : ""}{formatDate(fm.published)}</span>}
             {fm.role && <span class="meta-role">{fm.role}</span>}
           </dd>
         </div>

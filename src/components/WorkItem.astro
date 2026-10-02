@@ -1,5 +1,5 @@
 ---
-// One manuscript, abstract, or talk in the Selected Work lists.
+// One manuscript, abstract, or talk in the Research page lists.
 import { isMe } from '../lib/projects.js';
 
 interface Props {
@@ -40,7 +40,7 @@ const meta = [item.venue, item.details ?? item.date].filter(Boolean).join(' · '
             Code
           </a>
         )}
-        {item.project && <a href={`/blog/${item.project}/`}>Read the blog post</a>}
+        {item.project && <a href={`/blog/research/${item.project}/`}>Read the blog post</a>}
       </p>
     )
   }

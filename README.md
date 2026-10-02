@@ -17,17 +17,17 @@ npm run build    # static site in dist/
 | URL | Source | Content |
 | --- | --- | --- |
 | `/` | `src/pages/index.astro` | Hero, image carousel, news, latest posts |
-| `/selected-work/` | `src/pages/selected-work.astro` | Manuscripts, talks, preprints, abstracts |
+| `/research/` | `src/pages/research.astro` | Manuscripts, talks, preprints, abstracts |
 | `/software/` | `src/pages/software.astro` | Packages, weights and datasets (built from blog post `links`) |
-| `/competencies/` | `src/pages/competencies.astro` | Skills, peer review, mentoring, memberships |
 | `/talks/` | `src/pages/talks.astro` | Talks, posters and workshops |
-| `/blog/` | `src/pages/blog/*.mdx` | One long-form post per project |
+| `/blog/` | `src/pages/blog/index.astro` | Featured posts, then HomeLab and Research columns |
+| `/blog/<category>/` | `src/pages/blog/<category>/*.mdx` | Posts per category (`research`, `homelab`); set `featured: true` to feature one |
 | `/cv/`, `/contact/` | `src/pages/cv.astro`, `contact.astro` | Full CV and contact details |
 
 ## Where things live
 
 - `src/data/cv.js`: all CV content (profile, experience, publications, talks, teaching, skills, news, home gallery).
-- `src/assets/blog/<slug>/`: figures for each post; `cover.(png|jpg)` is the post's hero and card image.
+- `src/assets/blog/<category>/<slug>/`: figures for each post; `cover.(png|jpg)` is the post's hero and card image.
 - `src/assets/gallery/`: talk and poster images used on the home carousel and Talks page.
 - `src/components/article/`: MDX components (`Figure`, `Sidenote`, `Note`, `BarChart`, `Pipeline`, `Stats`).
 
@@ -36,5 +36,5 @@ npm run build    # static site in dist/
 - **CV changes:** edit `src/data/cv.js`. Add `image: 'gallery/<file>'` to a talk to show a photo on the Talks page
   and home carousel.
 - **New post:** copy a file in `src/pages/blog/`, keep the frontmatter keys, add figures under
-  `src/assets/blog/<slug>/` (with a `cover` image), and credit every reused figure in its caption.
+  `src/assets/blog/<category>/<slug>/` (with a `cover` image), and credit every reused figure in its caption.
 - The Google Scholar citation count is fetched at build time; the weekly scheduled deploy keeps it fresh.

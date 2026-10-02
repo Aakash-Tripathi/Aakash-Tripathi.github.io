@@ -1,0 +1,92 @@
+---
+layout: ../../../layouts/ArticleLayout.astro
+title: "Homelab, part 2: what I self-host"
+short: "Self-hosted apps"
+subtitle: "Photos, media, cameras, documents and notes: the two dozen containers that replace a stack of cloud subscriptions."
+description: "Part 2 of my homelab tour: the self-hosted apps on my Unraid server, from Immich and Frigate to Paperless-ngx and Orthanc, and how I reach them remotely."
+published: "2026-10-02"
+role: "Hobby project"
+tags: ["homelab", "self-hosting", "docker"]
+order: 2
+coverAlt: "Line illustration of a compact NAS with a stack of containers rising from it, next to app tiles for photos, media, documents and cameras"
+coverCaption: |-
+  Everything runs as containers on one box: photos, media, documents and cameras among them.
+---
+
+import Sidenote from '../../../components/article/Sidenote.astro';
+import Note from '../../../components/article/Note.astro';
+
+[Part 1](/blog/homelab/server/) covered the hardware: a Ryzen 5 5600G mini-ITX server running Unraid, with 32 TB of dual-parity storage and an NVMe cache. This part is about what runs on it.
+
+I self-host for three reasons. Our photos and documents are the data I least want to rent space for. Subscriptions for photo storage, camera recording and notes sync add up over a year. And running these apps myself teaches me things about databases, storage and networking that I use at work anyway.
+
+<Note title="In short" variant="info">
+
+24 Docker containers on Unraid replace cloud photo storage, a streaming library, a camera cloud service, a document scanner app and a notes sync service. Most apps lean on a shared PostgreSQL and Redis, and I reach everything remotely over Tailscale without opening a single port on the router.
+
+</Note>
+
+## What runs on it
+
+Everything is a Docker container managed from Unraid's web UI, with app data on the NVMe cache and bulk files on the array. I group them by job rather than by name:
+
+| Area | Containers | What they do |
+| --- | --- | --- |
+| Photos | Immich (server, machine learning, PostgreSQL, Redis) | A self-hosted Google Photos replacement with phone backup, face recognition and search |
+| Media | Jellyfin | Streams our movies, shows and music to any device |
+| Cameras | Frigate, MediaMTX, an FFmpeg camera relay | Network video recorder with object detection, plus a restreaming server for the camera feeds |
+| Documents | Paperless-ngx, Apache Tika, Gotenberg, Stirling PDF, ONLYOFFICE | Scans and OCRs paper into a searchable archive, converts office files, and edits PDFs and documents in the browser |
+| Notes | Obsidian LiveSync | Syncs my Obsidian vault across devices without a third-party cloud |
+| Household | KitchenOwl | Shared grocery lists, recipes and meal planning |
+| Medical imaging | Orthanc (with its database) | A DICOM server for experimenting with imaging pipelines at home |
+| Infrastructure | PostgreSQL 18, Redis, Heimdall | Shared databases and a start page linking to every service |
+
+A few more containers run personal side projects. The rest of this post goes a little deeper on the pieces that are more interesting than "it serves files."
+
+## Photos: Immich
+
+Immich is the app the rest of the house actually notices. The phone apps back up new photos in the background, and the web UI looks and behaves a lot like Google Photos.
+
+It ships as several containers rather than one. The server handles uploads, the API and the web app. Redis backs the job queue for work like thumbnail generation and metadata extraction. PostgreSQL stores the library, along with a vector extension that holds embeddings for search.
+
+The machine learning container does the part that feels like magic. It runs a face detection and recognition model to group people, and a CLIP-style model that maps images and text into the same embedding space. That second one is what lets me type "dog on the beach" and get the right photos back with no tags. Keeping ML in its own container means it can be restarted, updated or moved to other hardware without touching the library.
+
+## Cameras: Frigate, MediaMTX and an FFmpeg relay
+
+Frigate is a network video recorder built around object detection. Rather than running a model on every frame, it first looks for motion, then runs detection only on the regions that changed. That way a swaying tree doesn't trigger an alert, but a person or a car does. Events come with clips and snapshots, and recording can be kept continuous or limited to when something is detected.
+
+Cameras are often happiest with only one or two clients pulling a stream at a time. MediaMTX sits in front as a restreaming server: it pulls each feed once and re-serves it over RTSP, WebRTC or HLS to whatever wants it. The FFmpeg relay handles the less tidy part, repackaging a stream into a format the rest of the chain accepts. It's a small, boring piece, and it's often what makes an awkward camera usable.
+
+## Documents: Paperless-ngx, Tika and Gotenberg
+
+Paperless-ngx turns a pile of scanned letters, receipts and statements into a searchable archive. Drop a file into its consume folder or upload it, and it runs OCR, stores an archival PDF alongside the original, and suggests tags, correspondents and document types based on what it has seen before.
+
+On its own, Paperless handles PDFs and images. Apache Tika and Gotenberg extend that to everything else. Tika extracts text and metadata from office documents and emails, and Gotenberg converts those files to PDF so they can be archived and previewed like the rest. Together they mean a Word file or a forwarded email ends up as searchable as a scan.
+
+Stirling PDF covers the one-off jobs: merging, splitting, rotating or compressing a PDF without uploading it to a random website. ONLYOFFICE gives me document and spreadsheet editing in the browser.
+
+## Shared databases and a start page
+
+Many self-hosted apps ship a compose file with their own PostgreSQL and Redis. That works, but it means a dozen database containers to update and back up. Pointing apps that just need a standard database at one shared PostgreSQL 18 and one Redis keeps that to a single place to tune, patch and back up. Immich is the exception: it keeps its own database because it depends on a specific version and its vector extension.
+
+Heimdall is the front door. It's a single page with a tile for each service, so nobody in the house has to remember port numbers.
+
+## Medical imaging: Orthanc
+
+Orthanc is the odd one out for a homelab, and the one most tied to my day job. It's a lightweight, open-source DICOM server: it speaks the standard protocol that scanners and PACS systems use, and exposes a REST API on top.
+
+<Sidenote>Orthanc is the same open-source DICOM server many research groups use. Having one at home makes it easy to test imaging tooling on public datasets before it touches anything at work.</Sidenote>
+
+For someone who works on imaging pipelines, that's a useful sandbox. I can load public CT or MRI studies, then point a script or viewer at it and exercise the full store, query and retrieve flow the same way a hospital system would. It's a safe place to break things.
+
+## Remote access
+
+None of these services is exposed to the internet. When I'm away, I reach them over Tailscale, a mesh VPN built on WireGuard.
+
+Each of my devices runs a Tailscale client and joins a private network with the server. Connections are encrypted end to end and go directly between devices when possible, with a relay as a fallback. Tailscale's coordination service handles key exchange and NAT traversal, so I never forward a port on the router. From my phone or laptop, the apps behave the same way they do on the home network.
+
+It also removes a whole category of worry. There's no login page facing the public internet for anyone to scan or brute-force, and access control comes down to which devices are signed in to my network.
+
+## Closing
+
+None of this is exotic. Each app is a well-documented open-source project, and the server under them, described in [part 1](/blog/homelab/server/), is a modest mini-ITX box. What I like is that it all lives in one place I understand. When something breaks, I fix it, and I usually learn something along the way.

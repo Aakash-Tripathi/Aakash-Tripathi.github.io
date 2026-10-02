@@ -1,5 +1,7 @@
 ---
-// Full-bleed, scroll-snapping image strip with arrow buttons and a caption per slide.
+// Full-bleed, scroll-snapping image strip that loops forever. The slides are rendered
+// three times; after scrolling settles on a copy, the track jumps to the same slide in
+// the middle copy, so there is always something to the left and right.
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 
@@ -9,6 +11,7 @@ interface Slide {
   caption: string;
   href?: string;
   fit?: 'cover' | 'contain';
+  bg?: string;
 }
 
 interface Props {
@@ -17,64 +20,111 @@ interface Props {
 }
 
 const { slides, label } = Astro.props;
+const copies = [0, 1, 2].flatMap((copy) => slides.map((s, i) => ({ ...s, i, clone: copy !== 1 })));
 ---
 
 <section class="carousel" aria-roledescription="carousel" aria-label={label}>
   <div class="carousel__track" tabindex="0">
     {
-      slides.map((s, i) => (
-        <figure class="carousel__slide" aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
-          <div class:list={['carousel__frame', `carousel__frame--${s.fit ?? 'contain'}`]}>
-            <Image src={s.image} alt={s.alt} widths={[640, 960, 1400]} sizes="(min-width: 1100px) 1000px, 86vw" loading={i < 2 ? 'eager' : 'lazy'} />
+      copies.map((s) => (
+        <figure
+          class="carousel__slide"
+          aria-roledescription={s.clone ? undefined : 'slide'}
+          aria-label={s.clone ? undefined : `${s.i + 1} of ${slides.length}`}
+          aria-hidden={s.clone ? 'true' : undefined}
+          data-clone={s.clone ? '' : undefined}
+        >
+          <div class:list={['carousel__frame', `carousel__frame--${s.fit ?? 'contain'}`]} style={s.bg ? `background: ${s.bg}` : undefined}>
+            <Image
+              src={s.image}
+              alt={s.clone ? '' : s.alt}
+              widths={[640, 960, 1400]}
+              sizes="(min-width: 1100px) 1000px, 86vw"
+              loading={!s.clone && s.i < 2 ? 'eager' : 'lazy'}
+            />
           </div>
-          <figcaption>{s.href ? <a href={s.href}>{s.caption}</a> : s.caption}</figcaption>
+          <figcaption>
+            {s.href ? (
+              <a href={s.href} tabindex={s.clone ? -1 : undefined}>
+                {s.caption}
+              </a>
+            ) : (
+              s.caption
+            )}
+          </figcaption>
         </figure>
       ))
     }
   </div>
-  <div class="carousel__controls">
-    <button type="button" data-dir="-1" aria-label="Previous slide">&larr;</button>
-    <button type="button" data-dir="1" aria-label="Next slide">&rarr;</button>
-  </div>
+  <button class="carousel__arrow carousel__arrow--prev" type="button" data-dir="-1" aria-label="Previous slide">&larr;</button>
+  <button class="carousel__arrow carousel__arrow--next" type="button" data-dir="1" aria-label="Next slide">&rarr;</button>
 </section>
 
 <script>
   document.querySelectorAll<HTMLElement>('.carousel').forEach((root) => {
-    const track = root.querySelector<HTMLElement>('.carousel__track');
-    root.dataset.js = '';
-    // Show the caption of the slide nearest the centre only.
+    const track = root.querySelector<HTMLElement>('.carousel__track')!;
     const slides = [...root.querySelectorAll<HTMLElement>('.carousel__slide')];
-    const markActive = () => {
-      if (!track) return;
-      const mid = track.scrollLeft + track.clientWidth / 2;
-      let best = slides[0];
-      for (const s of slides) if (Math.abs(s.offsetLeft + s.offsetWidth / 2 - mid) < Math.abs(best.offsetLeft + best.offsetWidth / 2 - mid)) best = s;
-      slides.forEach((s) => s.toggleAttribute('data-active', s === best));
+    const n = slides.length / 3;
+    root.dataset.js = '';
+
+    // scrollLeft that centres slide i
+    const centre = (i: number) => slides[i].offsetLeft + slides[i].offsetWidth / 2 - track.clientWidth / 2;
+    const nearest = () => {
+      let best = 0;
+      for (let i = 1; i < slides.length; i++) {
+        if (Math.abs(centre(i) - track.scrollLeft) < Math.abs(centre(best) - track.scrollLeft)) best = i;
+      }
+      return best;
     };
-    track?.addEventListener('scroll', markActive, { passive: true });
-    markActive();
+    const jump = (i: number) => track.scrollTo({ left: centre(i), behavior: 'instant' });
+    const markActive = () => {
+      const a = nearest();
+      slides.forEach((s, i) => s.toggleAttribute('data-active', i === a));
+    };
+    // Once scrolling stops on a copy, move to the same slide in the middle copy.
+    const recentre = () => {
+      const a = nearest();
+      if (a < n) jump(a + n);
+      else if (a >= 2 * n) jump(a - n);
+      markActive();
+    };
+
+    let settle: number | undefined;
+    track.addEventListener(
+      'scroll',
+      () => {
+        markActive();
+        clearTimeout(settle);
+        settle = window.setTimeout(recentre, 140);
+      },
+      { passive: true },
+    );
+    track.addEventListener('scrollend', recentre);
+    addEventListener('resize', () => jump(n + (nearest() % n)));
+    // Start every arrow move from the middle copy, so the target always exists.
     root.querySelectorAll<HTMLButtonElement>('[data-dir]').forEach((btn) =>
       btn.addEventListener('click', () => {
-        const slide = track?.querySelector<HTMLElement>('.carousel__slide');
-        if (!track || !slide) return;
-        const step = slide.offsetWidth * Number(btn.dataset.dir);
-        const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 4;
-        const atStart = track.scrollLeft <= 4;
-        if (step > 0 && atEnd) track.scrollTo({ left: 0 });
-        else if (step < 0 && atStart) track.scrollTo({ left: track.scrollWidth });
-        else track.scrollBy({ left: step });
+        const a = n + (nearest() % n);
+        jump(a);
+        track.scrollTo({ left: centre(a + Number(btn.dataset.dir)) });
       }),
     );
+
+    jump(n);
+    markActive();
   });
 </script>
 
 <style>
   .carousel {
     --slide-w: min(78vw, 1000px);
-    padding-bottom: 72px;
+    --frame-h: clamp(240px, 46vw, 560px);
+    position: relative;
+    padding-bottom: 64px;
   }
 
   .carousel__track {
+    position: relative;
     display: flex;
     gap: 14px;
     overflow-x: auto;
@@ -99,8 +149,13 @@ const { slides, label } = Astro.props;
     scroll-snap-align: center;
   }
 
+  /* Without JS the copies would just repeat, so show the originals only. */
+  .carousel:not([data-js]) .carousel__slide[data-clone] {
+    display: none;
+  }
+
   .carousel__frame {
-    height: clamp(240px, 46vw, 560px);
+    height: var(--frame-h);
     overflow: hidden;
     background: #fff;
   }
@@ -143,10 +198,6 @@ const { slides, label } = Astro.props;
     opacity: 1;
   }
 
-  .carousel:not([data-js]) .carousel__controls {
-    display: none;
-  }
-
   figcaption a {
     text-decoration: none;
   }
@@ -155,24 +206,45 @@ const { slides, label } = Astro.props;
     text-decoration: underline;
   }
 
-  .carousel__controls {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 40px;
-  }
-
-  .carousel__controls button {
-    width: 44px;
-    height: 44px;
+  /* Arrows sit over the left and right edges of the centred slide. */
+  .carousel__arrow {
+    position: absolute;
+    top: calc(var(--frame-h) / 2);
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
     border: 0;
-    background: #c9c9c9;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
     color: #000;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     cursor: pointer;
+    transform: translateY(-50%);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    transition: background-color 0.15s, transform 0.15s;
   }
 
-  .carousel__controls button:hover {
+  .carousel__arrow:hover {
     background: #fff;
+    transform: translateY(-50%) scale(1.06);
+  }
+
+  .carousel__arrow:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
+  }
+
+  .carousel__arrow--prev {
+    left: max(16px, calc((100vw - var(--slide-w)) / 2 - 24px));
+  }
+
+  .carousel__arrow--next {
+    right: max(16px, calc((100vw - var(--slide-w)) / 2 - 24px));
+  }
+
+  .carousel:not([data-js]) .carousel__arrow {
+    display: none;
   }
 </style>

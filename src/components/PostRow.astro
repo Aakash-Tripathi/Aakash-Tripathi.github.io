@@ -1,0 +1,134 @@
+---
+// Compact post card: category and first tag on top, title and date on the left, cover on the right.
+import { Image } from 'astro:assets';
+import { formatDate, categories } from '../lib/projects.js';
+import { cover } from '../lib/images.js';
+
+interface Props {
+  post: Record<string, any>;
+  showCategory?: boolean;
+  stacked?: boolean;
+}
+
+const { post: p, showCategory = true, stacked = false } = Astro.props;
+const img = cover(p.key);
+const label = categories.find((c) => c.id === p.category)?.label;
+---
+
+<article class:list={['row', { 'row--stacked': stacked }]}>
+  <p class="row__meta"><span>{showCategory ? label : ''}</span><span>{p.tags?.find((t) => t.toLowerCase() !== p.category)}</span></p>
+  <div class="row__body">
+    <div>
+      <h3><a href={p.url}>{p.title}</a></h3>
+      <p class="row__excerpt">{p.subtitle}</p>
+      <p class="row__date">{formatDate(p.published)}</p>
+    </div>
+    <a class="row__image" href={p.url} tabindex="-1" aria-hidden="true" style={p.coverBg ? `background: ${p.coverBg}` : undefined}>
+      {img && <Image src={img} alt="" widths={[320, 640]} sizes="200px" />}
+    </a>
+  </div>
+</article>
+
+<style>
+  .row {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 14px;
+  }
+
+  .row__body {
+    flex: 1;
+  }
+
+  .row__meta {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 0 8px;
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-color);
+  }
+
+  .row__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 42%;
+    gap: 16px;
+  }
+
+  .row__body > div {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .row__date {
+    margin-top: auto !important;
+    padding-top: 8px;
+  }
+
+  h3 {
+    font-size: 1rem;
+    line-height: 1.35;
+    margin: 0;
+  }
+
+  h3 a {
+    text-decoration: none;
+  }
+
+  h3 a:hover {
+    text-decoration: underline;
+  }
+
+  .row__excerpt {
+    margin: 6px 0 0;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--muted-color);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .row__date {
+    margin: 8px 0 0;
+    font-size: 0.72rem;
+    color: var(--faint-color);
+  }
+
+  .row__image {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 5 / 3;
+    padding: 8px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .row--stacked .row__body {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .row--stacked .row__image {
+    order: -1;
+    aspect-ratio: 2 / 1;
+  }
+
+  .row--stacked .row__excerpt {
+    display: none;
+  }
+
+  .row--stacked h3 {
+    font-size: 1.1rem;
+  }
+
+  .row__image :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+</style>

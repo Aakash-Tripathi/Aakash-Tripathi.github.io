@@ -8,7 +8,7 @@ import { links } from '../data/cv.js';
 
 // Software = blog posts that ship something reusable (code, packages, weights, datasets).
 const RELEASE = /^(Code|PyPI|Docs|Dataset|Weights|Embeddings|Safety classifier)$/;
-const packages = (await getProjects())
+const packages = (await getProjects("research"))
   .map((p) => ({ ...p, releases: (p.links ?? []).filter((l) => RELEASE.test(l.label)) }))
   .filter((p) => p.releases.length > 0);
 const [featured, ...rest] = packages;
@@ -32,7 +32,7 @@ const [featured, ...rest] = packages;
     featured && (
       <section class="container featured">
         <a class="featured__image" href={featured.url} tabindex="-1" aria-hidden="true">
-          {cover(featured.slug) && <Image src={cover(featured.slug)} alt="" widths={[720, 1080, 1600]} sizes="(min-width: 1100px) 900px, 100vw" />}
+          {cover(featured.key) && <Image src={cover(featured.key)} alt="" widths={[720, 1080, 1600]} sizes="(min-width: 1100px) 900px, 100vw" />}
         </a>
         <div class="featured__text">
           <h2>{featured.short}</h2>
@@ -57,7 +57,7 @@ const [featured, ...rest] = packages;
         <article class="pkg">
           <h2>{p.short}</h2>
           <a class="pkg__image" href={p.url} tabindex="-1" aria-hidden="true">
-            {cover(p.slug) && <Image src={cover(p.slug)} alt="" widths={[480, 720, 960]} sizes="(min-width: 1100px) 380px, (min-width: 700px) 45vw, 100vw" />}
+            {cover(p.key) && <Image src={cover(p.key)} alt="" widths={[480, 720, 960]} sizes="(min-width: 1100px) 380px, (min-width: 700px) 45vw, 100vw" />}
           </a>
           {coverCredit(p) && <p class="credit">Figure: {coverCredit(p)}</p>}
           <p>{p.subtitle}</p>

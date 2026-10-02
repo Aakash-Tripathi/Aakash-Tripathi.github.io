@@ -29,9 +29,8 @@ export const links = {
 };
 
 export const nav = [
-  { label: 'Selected Work', href: '/selected-work/' },
+  { label: 'Research', href: '/research/' },
   { label: 'Software', href: '/software/' },
-  { label: 'Competencies', href: '/competencies/' },
   { label: 'Talks', href: '/talks/' },
   { label: 'Blog', href: '/blog/' },
   { label: 'CV', href: '/cv/' },
@@ -414,7 +413,7 @@ export const talks = [
     title: 'AI-Driven Extraction of Key Clinical Data from Pathology Reports to Enhance Cancer Registries',
     venue: 'USCAP 114th Annual Meeting, Boston, Massachusetts',
     date: 'March 22-27, 2025',
-    thumb: 'blog/clever/automated-evaluation-tcga.png',
+    thumb: 'blog/research/clever/automated-evaluation-tcga.png',
     credit: 'Image: results from the follow-on consensus study, Tripathi et al. (2026), Laboratory Investigation, © 2025 USCAP, published by Elsevier',
   },
   {
@@ -432,7 +431,7 @@ export const talks = [
     title: 'Extraction of Discrete Information from Pathology Reports Using Local and Private LLMs',
     venue: 'Oral presentation, Digital Pathology Association, Pathology Visions',
     date: '2024',
-    thumb: 'blog/clever/report-example.png',
+    thumb: 'blog/research/clever/report-example.png',
     credit: 'Image: example from the later consensus-study preprint, Tripathi et al. (2025), medRxiv, CC BY-NC-ND 4.0',
     note: 'Coauthor',
   },
@@ -575,12 +574,12 @@ export const gallery = [
 // Dated highlights for the home page, newest first.
 export const news = [
   { date: '2026-09-27', text: 'Started as Generative and Multimodal AI Research Scientist, Precision Oncology, at Moffitt Cancer Center.' },
-  { date: '2026-07', text: 'HetMoE and ShiftSmooth for transcription factor binding site prediction published in Mathematics.', href: '/blog/hetmoe/' },
+  { date: '2026-07', text: 'HetMoE and ShiftSmooth for transcription factor binding site prediction published in Mathematics.', href: '/blog/research/hetmoe/' },
   { date: '2026-06-12', text: 'Speaker and co-presenter, Learning Lab LL4022 at the SIIM Annual Meeting in Pittsburgh: running local LLMs behind institutional firewalls.' },
   { date: '2026-04-17', text: 'Two abstracts at the AACR Annual Meeting 2026 in San Diego: real-world multimodal AI and multi-agent extraction of social determinants of health.' },
   { date: '2026-04-08', text: 'The Pathologist covered our pathology report extraction study.', href: 'https://www.thepathologist.com/issues/2026/articles/april/ai-tackles-pathology-report-complexity/' },
   { date: '2026-03-21', text: 'USCAP 2026 abstract on a multi-agent system for neuro-oncology biomarker extraction (San Antonio).' },
-  { date: '2025-12-16', text: 'Consensus-based LLM extraction from surgical pathology reports published online in Laboratory Investigation.', href: '/blog/clever/' },
+  { date: '2025-12-16', text: 'Consensus-based LLM extraction from surgical pathology reports published online in Laboratory Investigation.', href: '/blog/research/clever/' },
   { date: '2025-10-30', text: 'Presented CLEVER multi-agent clinical variable extraction at the Dr. Robert Gillies Machine Learning Workshop in Cancer.' },
   { date: '2025-09', text: 'Joined the Department of Machine Learning at Moffitt Cancer Center as Machine Learning Engineer I.' },
   { date: '2025-08', text: 'Completed a Ph.D. in Electrical Engineering at the University of South Florida.' },
