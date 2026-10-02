@@ -1,0 +1,258 @@
+---
+layout: ../../layouts/ArticleLayout.astro
+title: "EAGLE: attention fusion and attribution for cancer survival"
+short: "EAGLE"
+subtitle: "Fusing imaging, report and clinical embeddings with cross-modal attention, then asking which modality drove each patient's risk score."
+description: "How EAGLE fuses imaging, report and clinical data via cross-modal attention to predict survival in 911 patients with GBM, IPMN or NSCLC and explains each score."
+published: "2025-06-12"
+venue: "arXiv"
+role: "First author"
+paperTitle: "EAGLE: Efficient Alignment of Generalized Latent Embeddings for Multimodal Survival Prediction with Interpretable Attribution Analysis"
+authors: ["Aakash Tripathi", "Asim Waqas", "Matthew B. Schabath", "Yasin Yilmaz", "Ghulam Rasool"]
+affiliations: ["Department of Machine Learning, Moffitt Cancer Center & Research Institute", "Department of Cancer Epidemiology, Moffitt Cancer Center & Research Institute", "Department of Electrical Engineering, University of South Florida"]
+links:
+  - { label: "Paper", url: "https://arxiv.org/abs/2506.22446" }
+  - { label: "PDF", url: "https://arxiv.org/pdf/2506.22446" }
+  - { label: "Code", url: "https://github.com/lab-rasool/EAGLE" }
+tags: ["multimodal fusion", "survival analysis", "attention", "interpretability", "oncology"]
+order: 3
+citation: "Tripathi A, Waqas A, Schabath MB, Yilmaz Y, Rasool G. EAGLE: Efficient Alignment of Generalized Latent Embeddings for Multimodal Survival Prediction with Interpretable Attribution Analysis. arXiv [Preprint]. 2025 Jun 12. arXiv:2506.22446. doi:10.48550/arXiv.2506.22446"
+bibtex: |
+  @misc{tripathi2025eagle,
+    title         = {{EAGLE}: Efficient Alignment of Generalized Latent Embeddings for Multimodal Survival Prediction with Interpretable Attribution Analysis},
+    author        = {Tripathi, Aakash and Waqas, Asim and Schabath, Matthew B. and Yilmaz, Yasin and Rasool, Ghulam},
+    year          = {2025},
+    eprint        = {2506.22446},
+    archivePrefix = {arXiv},
+    primaryClass  = {cs.LG},
+    doi           = {10.48550/arXiv.2506.22446},
+    url           = {https://arxiv.org/abs/2506.22446}
+  }
+coverAlt: "Block diagram: imaging data (RadImageNet, 1000 dims), clinical data (demographics, labs, staging and markers, 10-15 dims) and text reports (radiology reports and pathology notes, 1024 dims) each feed an encoder of linear, BatchNorm plus ReLU, linear, dropout and linear layers that outputs 128, 32 and 128 dimensions. The three encoded vectors enter a cross-modal attention mechanism, then a feature fusion network with two outputs: a primary Cox risk score for survival prediction and an auxiliary binary event prediction of death or censoring. A lower panel lists three attribution methods: attention attribution, gradient attribution and integrated gradients."
+coverCaption: |-
+  EAGLE architecture. Imaging (RadImageNet), clinical and text-report (GatorTron) embeddings each pass through a dedicated encoder of linear, batch-normalization, ReLU and dropout layers, down to 128 dimensions (imaging, text) or 32 (clinical). Cross-modal attention and a feature fusion network then produce a primary Cox risk score and an auxiliary event prediction, and three attribution methods explain each modality's contribution. Input sizes vary by cohort; see the cohort table below. Reproduced from <a href='https://arxiv.org/abs/2506.22446'>Tripathi et al. (2025)</a>, <em>arXiv</em>, <a href='https://creativecommons.org/licenses/by-nc-nd/4.0/'>CC BY-NC-ND 4.0</a>.
+---
+
+import Sidenote from '../../components/article/Sidenote.astro';
+import Note from '../../components/article/Note.astro';
+import Figure from '../../components/article/Figure.astro';
+import BarChart from '../../components/article/BarChart.astro';
+import Stats from '../../components/article/Stats.astro';
+import { Image } from 'astro:assets';
+import attributionMethodsImg from '../../assets/blog/eagle/attribution-methods-nsclc.png';
+import patientAttributionImg from '../../assets/blog/eagle/patient-attribution-gbm.png';
+
+The information that predicts how long a cancer patient will live is spread across several kinds of data: imaging studies, free-text radiology and pathology reports, and structured fields such as age, stage, smoking history and laboratory values. Clinicians read these together. Many survival models do not. They either use one source or concatenate features from several, which treats every source as equally important for every patient.
+
+EAGLE (Efficient Alignment of Generalized Latent Embeddings) is our framework for survival prediction from imaging, text and clinical data together. It takes embeddings that have already been computed for each modality, compresses each one with a small encoder, applies cross-modal attention between modalities, and outputs a Cox risk score. For every patient it also reports how much each modality contributed to that score.[^eagle]
+
+We evaluated EAGLE on 911 patients across glioblastoma (GBM), intraductal papillary mucinous neoplasm (IPMN) and non-small cell lung cancer (NSCLC). From a 64-dimensional fused representation, it reached C-indices of 0.637, 0.679 and 0.598, and its risk tertiles separated patients with clearly different survival in every cohort. I am first author; Asim Waqas, Matthew B. Schabath, Yasin Yilmaz and Ghulam Rasool are co-authors.
+
+## Why fusion is hard
+
+Using a single modality leaves information out. An imaging-only model cannot see comorbidities or performance status. A clinical-only model misses tumor morphology. The two common fixes have their own problems. Concatenating features assumes every modality carries the same weight. Late fusion trains a separate model for each modality and combines their predictions, so it can miss interactions between modalities during training.
+
+Real cohorts add two more problems: missing data, and outcomes that differ sharply from one cancer to the next. In our cohorts, pathological staging was missing for about 47% of NSCLC patients, non-contrast CT was available for 37.2% of them, and radiology reports existed for 78.9% of IPMN patients. The GBM cohort has a median survival of 13.0 months and a 95.6% event rate, against 6.53 years and 48.5% for IPMN. Clinicians also need to know *why* a model rates a patient as high risk before they will act on it, and a black-box fusion model cannot tell them.
+
+<Sidenote>The concordance index (C-index) is the probability that, for a comparable pair of patients in which patient *i* had the event first, the model gives *i* the higher risk score. A value of 0.5 means the ranking is random, and 1.0 means it is perfect.</Sidenote>
+
+## The approach
+
+EAGLE runs in a fixed sequence of stages. Embeddings are extracted once, before training, so only the encoders, attention and fusion layers, and prediction heads are trained.
+
+## How it works
+
+### Modality encoders
+
+Each modality enters as a fixed embedding. Imaging embeddings come from RadImageNet[^radimagenet]. They have 1,000 dimensions for GBM MRI and IPMN CT and 2,048 for NSCLC, where the contrast and non-contrast CT embeddings are concatenated. Reports are embedded with GatorTron[^gatortron], a clinical language model. For GBM and IPMN several report types are concatenated, giving 2,304 and 1,536 dimensions. NSCLC uses a single 1,024-dimensional clinical text embedding. Structured data contribute 10-36 clinical features. Numeric values are median-imputed and z-scored. Categorical values are label-encoded, with an explicit "Unknown" category for missing entries. Dataset-specific extractors also pull binary flags out of the report text, such as MGMT methylation in GBM and main-duct involvement in IPMN.
+
+Each encoder is a stack of linear layers, each followed by batch normalization, ReLU and dropout (p = 0.3 by default). Imaging and text are compressed to 128 dimensions. The default stack is [512, 256, 128], with [256, 128] for some cohorts. Clinical features are compressed to 32 dimensions through [64, 32], or [128, 64, 32] for NSCLC.
+
+<Sidenote>EAGLE never sees raw pixels or tokens, which lowers the computational cost. The trade-off, which the paper itself notes, is that the image features are fixed rather than learned end to end.</Sidenote>
+
+### Cross-modal attention
+
+After encoding, the modality representations are projected to a common dimension and arranged as a short sequence. Multi-head attention (8 heads, dropout 0.1) is then applied to two pairs: imaging and text, and imaging and clinical. Imaging appears in both pairs. The attended features are pooled, concatenated and passed through a fusion network ([256, 128, 64] by default) that ends in a 64-dimensional patient representation. The model keeps the attention weights from each forward pass so they can be used for attribution later.
+
+<Sidenote>Going from the concatenated pre-extracted embeddings (2,000-3,000 dimensions) to 64 dimensions is a reduction of approximately 97-98%. Measured from the original multimodal inputs, the paper reports 99.96%.</Sidenote>
+
+### Survival objective
+
+The primary head outputs one risk score $\hat r_i$ per patient and is trained with the Cox partial likelihood, which handles censored follow-up. The paper writes the risk score as $\beta^{T}x_i$. With $\delta_i$ the event indicator and $R_i$ the set of patients still at risk at time $t_i$:
+
+$$
+\mathcal{L}_{\text{cox}} = -\frac{1}{N_{\text{events}}}\sum_{i:\,\delta_i = 1}\Big[\hat r_i - \log \sum_{j \in R_i} \exp(\hat r_j)\Big],
+\qquad
+\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{cox}} + \lambda\,\mathcal{L}_{\text{event}}
+$$
+
+An auxiliary binary head predicts whether the event occurs. It is trained jointly with the Cox head, and its loss is weighted by $\lambda = 0.1$.
+
+### Three attribution methods
+
+EAGLE estimates each modality's share of a prediction in three ways. *Simple attribution* is the share of activation magnitude in each encoded representation $h_m$:
+
+$$
+C_m^{\text{simple}} = \frac{\lVert h_m \rVert_1}{\sum_{k \in \{\text{imaging},\,\text{text},\,\text{clinical}\}} \lVert h_k \rVert_1} \times 100\%
+$$
+
+*Gradient-based attribution* uses gradient × activation. *Integrated gradients* accumulates gradients along a path from a zero-embedding baseline to the actual input. All three are normalized to percentages, which gives a modality breakdown for each patient and for the whole cohort. Patients are then split into low, medium and high risk using tertiles of the predicted score.
+
+## Data and evaluation
+
+The paper describes the cohorts as clinically representative but drawn from single institutions. The AACR 2026 abstract places all 911 patients at a single NCI-designated cancer center.
+
+<Figure caption="The three cohorts used in the preprint. Availability percentages are the share of patients with that input. Embedding sizes are encoder input dimensions.">
+
+| Cohort | Patients | Imaging | Text | Median survival | Event rate |
+| --- | --- | --- | --- | --- | --- |
+| GBM | 160 | MRI (T1 ± contrast, T2, FLAIR), 1,000-d | Radiology (100%), pathology (96.2%), treatment summaries; 2,304-d | 13.0 months | 95.6% |
+| IPMN | 171 | Triple-phase CT (87.1% available), 1,000-d | Radiology (78.9%), pathology (98.2%); 1,536-d | 6.53 years | 48.5% |
+| NSCLC | 580 | Contrast CT (74.0%) + non-contrast CT (37.2%), 2,048-d | Clinical embeddings of radiology and clinical documentation, 1,024-d | 35.0 months | 51.7% |
+
+</Figure>
+
+We trained with 5-fold cross-validation, stratified by event status. We report the C-index, log-rank tests between risk groups and Kaplan-Meier curves. For baselines, we ran Random Survival Forests (RSF), Cox proportional hazards (CoxPH) and DeepSurv[^deepsurv] on unimodal embeddings and on MedGemma multimodal embeddings.
+
+<details>
+<summary>Training configuration</summary>
+
+- Optimizer: AdamW, learning rate 1e-4 (GBM, IPMN) or 5e-5 (NSCLC), weight decay 0.01
+- Scheduler: ReduceLROnPlateau on validation C-index; early stopping with patience 15
+- Gradient clipping at norm 1.0; batch size 32 (GBM, IPMN) or 24 (NSCLC)
+- Dropout 0.3 by default, 0.35 for NSCLC
+- Implemented in PyTorch with fixed random seeds
+
+</details>
+
+## Results
+
+<Stats items={[
+  {value: '911', label: 'patients in three cohorts'},
+  {value: '3', label: 'modalities: imaging, text, clinical'},
+  {value: '64', label: 'dimensions in the fused representation'},
+  {value: '3', label: 'attribution methods'},
+]} />
+
+EAGLE reached a C-index of 0.637 ± 0.087 on GBM, 0.679 ± 0.029 on IPMN and 0.598 ± 0.021 on NSCLC. Against the best baseline on unimodal or MedGemma inputs, EAGLE scored higher on GBM (0.637 vs 0.589) and IPMN (0.679 vs 0.585) and lower on NSCLC (0.598 vs 0.640).
+
+<Figure caption="C-index by cohort: EAGLE's own Cox head and the best classical baseline (RSF, CoxPH or DeepSurv) on unimodal or MedGemma inputs. Baseline values as printed in the preprint's Figure 15.">
+<BarChart
+  mark="dot"
+  min={0.5}
+  max={0.7}
+  decimals={3}
+  series={['EAGLE', 'Best baseline, unimodal or MedGemma input']}
+  rows={[
+    {label: 'GBM', value: 0.637, series: 'EAGLE', note: 'n = 160 · ± 0.087'},
+    {label: 'GBM', value: 0.589, series: 'Best baseline, unimodal or MedGemma input', note: 'CoxPH, MedGemma'},
+    {label: 'IPMN', value: 0.679, series: 'EAGLE', note: 'n = 171 · ± 0.029'},
+    {label: 'IPMN', value: 0.585, series: 'Best baseline, unimodal or MedGemma input', note: 'RSF, MedGemma'},
+    {label: 'NSCLC', value: 0.598, series: 'EAGLE', note: 'n = 580 · ± 0.021'},
+    {label: 'NSCLC', value: 0.640, series: 'Best baseline, unimodal or MedGemma input', note: 'RSF, MedGemma'},
+  ]}
+  axisLabel="Concordance index (0.5 = random ranking)"
+/>
+</Figure>
+
+### Risk groups
+
+The tertile risk groups separate clearly in all three cohorts. In GBM the differences are significant (log-rank p &lt; 0.001). In IPMN the low-risk group had minimal events over extended follow-up: 3 events among 56 patients.
+
+<Sidenote>Tertile cutoffs split each cohort into thirds by predicted score. They are not clinical thresholds.</Sidenote>
+
+### Which modality mattered
+
+The answer depends on the attribution method as much as on the disease. Under simple attribution, text reports carried the most weight in GBM, while IPMN and NSCLC split almost evenly across the three modalities. Gradient-based attribution ranks imaging first in all three cohorts, and in NSCLC it gives imaging 49.0%, text 31.6% and clinical data 19.4%.
+
+<Figure caption="Average modality contribution to EAGLE's risk score by cohort under simple (magnitude-based) attribution, as plotted in the preprint's Figures 5, 9 and 13.">
+<BarChart
+  min={0}
+  max={60}
+  decimals={1}
+  unit="%"
+  series={['Imaging', 'Text', 'Clinical']}
+  rows={[
+    {label: 'GBM', value: 37.5, series: 'Imaging'},
+    {label: 'GBM', value: 43.7, series: 'Text'},
+    {label: 'GBM', value: 18.8, series: 'Clinical'},
+    {label: 'IPMN', value: 31.5, series: 'Imaging'},
+    {label: 'IPMN', value: 33.6, series: 'Text'},
+    {label: 'IPMN', value: 34.9, series: 'Clinical'},
+    {label: 'NSCLC', value: 31.9, series: 'Imaging'},
+    {label: 'NSCLC', value: 33.7, series: 'Text'},
+    {label: 'NSCLC', value: 34.4, series: 'Clinical'},
+  ]}
+  axisLabel="Share of attribution"
+/>
+</Figure>
+
+<Figure caption="The three attribution methods applied to the same NSCLC model. Average contributions are imaging 31.9%, text 33.7% and clinical 34.4% under simple attribution, imaging 49.0%, text 31.6% and clinical 19.4% under gradient-based attribution, and text 92.0%, clinical 8.0% and imaging 0.0% under integrated gradients. Lower panels compare each modality across methods, the correlations between methods, and each attribution's correlation with the risk score. Reproduced from <a href='https://github.com/lab-rasool/EAGLE'>Tripathi et al. (2025)</a>, <em>EAGLE code repository</em>, © 2025 Aakash Tripathi, Moffitt Cancer Center, <a href='https://github.com/lab-rasool/EAGLE/blob/main/LICENSE'>MIT License</a>." wide={true}>
+<Image src={attributionMethodsImg} alt="Multi-panel figure titled Comprehensive Attribution Analysis, NSCLC. Three pie charts give average modality contributions: simple attribution imaging 31.9%, text 33.7%, clinical 34.4%; gradient-based imaging 49.0%, text 31.6%, clinical 19.4%; integrated gradients text 92.0%, clinical 8.0%, imaging 0.0%. Below are bar charts comparing imaging, text and clinical contributions across the three methods, a heatmap of correlations between the nine method and modality attributions, and a bar chart of each attribution's correlation with the risk score, all between -0.12 and 0.14." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+<Note title="Key takeaway" variant="info">
+
+A 64-dimensional representation built from attention-fused embeddings kept useful ranking ability in three very different cancers (C-index 0.598-0.679). It also produced risk tertiles with clearly separated survival curves. The per-patient attributions break each score down by modality, but the three methods can disagree, so they are best read together.
+
+</Note>
+
+## What we learned
+
+The paper reads the attribution patterns against clinical understanding of each disease. In GBM, it suggests the weight on text reflects surgical and pathological details that are often written only in narrative reports: extent of resection, MGMT methylation and IDH mutation status. In IPMN, the even split fits guidelines that call for combined review of imaging features, cyst fluid analysis and clinical presentation. In NSCLC, it ties the 49.0% gradient-based imaging share to the central role of CT in TNM staging.
+
+<Figure caption="Patient-level attribution for GBM. The top panels show modality contributions for the ten highest-risk and ten lowest-risk patients, and the bottom panels relate contributions to risk score, with a heatmap of patient-specific attribution patterns across the risk spectrum. Reproduced from <a href='https://arxiv.org/abs/2506.22446'>Tripathi et al. (2025)</a>, <em>arXiv</em>, <a href='https://creativecommons.org/licenses/by-nc-nd/4.0/'>CC BY-NC-ND 4.0</a>." wide={true}>
+<Image src={patientAttributionImg} alt="Four panels. Top left: grouped bars of imaging, text and clinical contribution for the 10 highest-risk GBM patients, with text the largest share for every patient at roughly 40-59%. Top right: the same for the 10 lowest-risk patients, where imaging or text leads depending on the patient. Bottom left: scatter of contribution against risk score with trend lines, text rising and imaging falling as risk increases while clinical stays near 19%. Bottom right: heatmap of the three modality contributions for 20 patients sorted by risk." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+### Limitations
+
+Most of these limitations are stated in the preprint itself.
+
+- **Baselines sometimes win.** On NSCLC, RSF on MedGemma embeddings beat EAGLE. The paper takes this as room for architectural refinement.
+- **Fixed embeddings.** The image features are not learned end to end, which may limit what features the model can discover.
+- **Single-institution cohorts.** External validation is needed before claiming the results generalize.
+- **One architecture for every cancer.** The cohorts' survival and event-rate profiles differ widely, and the paper suggests cancer-specific adaptations may work better than one shared design.
+- **Noisy attribution signals.** Gradients with respect to pre-extracted embeddings can be very small. The paper computes all three methods for this reason, and as shown above, they can disagree.
+
+The reported spread is also widest for GBM (± 0.087), so that cohort's C-index is the least certain of the three.
+
+## Where it goes next
+
+The paper lists the next steps: longitudinal data that capture treatment-response dynamics, more modalities (genomic profiles, liquid biopsies and digital pathology), uncertainty estimates for individual predictions, and prospective validation.
+
+A related AACR 2025 abstract from our group used MINDS and HONeYBEE to curate data from over 10,000 cancer patients, combined modality embeddings with late fusion, and reported a 12% improvement in concordance indices over unimodal approaches.[^aacr25] EAGLE instead learns cross-modal attention before fusion. An AACR 2026 abstract presents the same three cohorts (911 patients) and C-indices as a real-world evaluation, with [HONeYBEE](/blog/honeybee/) generating the embeddings from incomplete, heterogeneous routine-care data (8.2-47% missing). It adds risk-group medians for the 171-patient pancreatic cohort: 100 months (low risk) against 35 months (high risk).[^aacr26]
+
+## Resources
+
+The code is public at `lab-rasool/EAGLE`.[^code] The patient data are not included. The scripts expect per-cohort Parquet embedding files under `data/<cohort>/`. The commands below follow the repository's `main.py`:
+
+```bash
+git clone https://github.com/lab-rasool/EAGLE.git
+cd EAGLE
+pip install -r requirements.txt
+
+# Train EAGLE on GBM, IPMN and NSCLC with all three attribution methods
+python main.py --mode train --comprehensive-attribution
+
+# Run the RSF, CoxPH and DeepSurv baselines
+python main.py --mode baseline
+```
+
+For background on fusion strategies in oncology, see our review of multimodal data integration.[^review]
+
+[^eagle]: Tripathi A, Waqas A, Schabath MB, Yilmaz Y, Rasool G. EAGLE: Efficient Alignment of Generalized Latent Embeddings for Multimodal Survival Prediction with Interpretable Attribution Analysis. arXiv:2506.22446, 2025. [https://arxiv.org/abs/2506.22446](https://arxiv.org/abs/2506.22446)
+
+[^radimagenet]: Mei X, Liu Z, Robson PM, et al. RadImageNet: An Open Radiologic Deep Learning Research Dataset for Effective Transfer Learning. *Radiology: Artificial Intelligence*. 2022;4(5):e210315. [https://doi.org/10.1148/ryai.210315](https://doi.org/10.1148/ryai.210315)
+
+[^gatortron]: Yang X, Chen A, PourNejatian N, et al. A large language model for electronic health records. *npj Digital Medicine*. 2022;5:194. [https://doi.org/10.1038/s41746-022-00742-2](https://doi.org/10.1038/s41746-022-00742-2)
+
+[^deepsurv]: Katzman JL, Shaham U, Cloninger A, et al. DeepSurv: personalized treatment recommender system using a Cox proportional hazards deep neural network. *BMC Medical Research Methodology*. 2018;18:24. [https://doi.org/10.1186/s12874-018-0482-1](https://doi.org/10.1186/s12874-018-0482-1)
+
+[^aacr25]: Tripathi AG, Waqas A, Yilmaz Y, Schabath MB, Rasool G. Predicting treatment outcomes using cross-modality correlations in multimodal oncology data [abstract]. *Cancer Research*. 2025;85(8 Suppl 1):3641. [https://doi.org/10.1158/1538-7445.AM2025-3641](https://doi.org/10.1158/1538-7445.AM2025-3641)
+
+[^aacr26]: Tripathi AG, Waqas A, Davis EW, Permuth JB, Farinhas J, Yilmaz Y, Schabath MB, Rasool G. Real-world evaluation of multimodal AI: Foundation model-driven multimodal AI for GBM, NSCLC, and PDAC [abstract]. *Cancer Research*. 2026;86(7 Suppl):1251. [https://doi.org/10.1158/1538-7445.AM2026-1251](https://doi.org/10.1158/1538-7445.AM2026-1251)
+
+[^code]: EAGLE source code, Rasool Lab. [https://github.com/lab-rasool/EAGLE](https://github.com/lab-rasool/EAGLE)
+
+[^review]: Waqas A, Tripathi A, Ramachandran RP, Stewart PA, Rasool G. Multimodal data integration for oncology in the era of deep neural networks: a review. *Frontiers in Artificial Intelligence*. 2024;7:1408843. [https://doi.org/10.3389/frai.2024.1408843](https://doi.org/10.3389/frai.2024.1408843)

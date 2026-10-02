@@ -1,0 +1,163 @@
+---
+import { Image } from 'astro:assets';
+import Layout from '../layouts/Layout.astro';
+import PageIntro from '../components/PageIntro.astro';
+import { getProjects, coverCredit } from '../lib/projects.js';
+import { cover } from '../lib/images.js';
+import { links } from '../data/cv.js';
+
+// Software = blog posts that ship something reusable (code, packages, weights, datasets).
+const RELEASE = /^(Code|PyPI|Docs|Dataset|Weights|Embeddings|Safety classifier)$/;
+const packages = (await getProjects())
+  .map((p) => ({ ...p, releases: (p.links ?? []).filter((l) => RELEASE.test(l.label)) }))
+  .filter((p) => p.releases.length > 0);
+const [featured, ...rest] = packages;
+---
+
+<Layout
+  title="Software | Aakash Tripathi"
+  description="Publicly released software, models, and datasets from Aakash Tripathi's research: HONeYBEE, MINDS, SeNMo, HetMoE, and EAGLE."
+>
+  <PageIntro title="About my software development">
+    <p>
+      Several of my projects ship code, models, or data, so others can rebuild the analyses or apply the methods to their
+      own cohorts. The Python packages, trained weights, and embedding datasets below are released through{' '}
+      <a href={links.labGithub} target="_blank" rel="noopener noreferrer">GitHub</a>,{' '}
+      <a href={links.labHuggingface} target="_blank" rel="noopener noreferrer">Hugging Face</a> and PyPI, each with a paper
+      and a blog post explaining how it works.
+    </p>
+  </PageIntro>
+
+  {
+    featured && (
+      <section class="container featured">
+        <a class="featured__image" href={featured.url} tabindex="-1" aria-hidden="true">
+          {cover(featured.slug) && <Image src={cover(featured.slug)} alt="" widths={[720, 1080, 1600]} sizes="(min-width: 1100px) 900px, 100vw" />}
+        </a>
+        <div class="featured__text">
+          <h2>{featured.short}</h2>
+          {coverCredit(featured) && <p class="credit">Figure: {coverCredit(featured)}</p>}
+          <p>{featured.subtitle}</p>
+          <p class="pkg__links">
+            {featured.releases.map((l) => (
+              <a class="button button--small button--ghost" href={l.url} target="_blank" rel="noopener noreferrer">
+                {l.label}
+              </a>
+            ))}
+            <a class="button button--small" href={featured.url}>Read the post</a>
+          </p>
+        </div>
+      </section>
+    )
+  }
+
+  <section class="container grid">
+    {
+      rest.map((p) => (
+        <article class="pkg">
+          <h2>{p.short}</h2>
+          <a class="pkg__image" href={p.url} tabindex="-1" aria-hidden="true">
+            {cover(p.slug) && <Image src={cover(p.slug)} alt="" widths={[480, 720, 960]} sizes="(min-width: 1100px) 380px, (min-width: 700px) 45vw, 100vw" />}
+          </a>
+          {coverCredit(p) && <p class="credit">Figure: {coverCredit(p)}</p>}
+          <p>{p.subtitle}</p>
+          <p class="pkg__links">
+            {p.releases.map((l) => (
+              <a class="button button--small button--ghost" href={l.url} target="_blank" rel="noopener noreferrer">
+                {l.label}
+              </a>
+            ))}
+            <a class="button button--small" href={p.url}>Read the post</a>
+          </p>
+        </article>
+      ))
+    }
+  </section>
+</Layout>
+
+<style>
+  .featured {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: 56px;
+    align-items: center;
+    padding-top: 80px;
+    padding-bottom: 40px;
+  }
+
+  .featured__image,
+  .pkg__image {
+    display: grid;
+    place-items: center;
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .featured__image {
+    padding: 24px;
+  }
+
+  .featured__image :global(img),
+  .pkg__image :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  h2 {
+    font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+    margin-bottom: 14px;
+  }
+
+  .featured__text p,
+  .pkg p {
+    font-size: 0.88rem;
+  }
+
+  .credit {
+    font-size: 0.72rem !important;
+    color: var(--faint-color);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 72px 40px;
+    padding-top: 64px;
+    padding-bottom: 120px;
+  }
+
+  .pkg h2 {
+    font-size: 1.25rem;
+    font-weight: 400;
+  }
+
+  .pkg__image {
+    aspect-ratio: 4 / 3;
+    padding: 16px;
+    margin-bottom: 18px;
+  }
+
+  .pkg__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  @media (max-width: 1000px) {
+    .featured {
+      grid-template-columns: 1fr;
+    }
+
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

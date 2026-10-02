@@ -1,0 +1,593 @@
+---
+import 'katex/dist/katex.min.css';
+import { Image, getImage } from 'astro:assets';
+import Layout from './Layout.astro';
+import StructuredData from '../components/StructuredData.astro';
+import { getProjects, formatDate, isMe } from '../lib/projects.js';
+import { cover } from '../lib/images.js';
+
+const { frontmatter: fm, headings = [] } = Astro.props;
+const slug = Astro.url.pathname.split('/').filter(Boolean).pop();
+const toc = headings.filter((h) => h.depth <= 3 && h.slug !== 'footnote-label');
+
+const coverImg = cover(slug);
+const ogImage = coverImg ? (await getImage({ src: coverImg, width: 1200, format: 'png' })).src : undefined;
+const projects = await getProjects();
+const index = projects.findIndex((p) => p.slug === slug);
+const prev = index > 0 ? projects[index - 1] : undefined;
+const next = index >= 0 && index < projects.length - 1 ? projects[index + 1] : undefined;
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: fm.title,
+  description: fm.description,
+  url: new URL(Astro.url.pathname, Astro.site).href,
+  author: { '@id': 'https://aakash-tripathi.github.io/#person', '@type': 'Person', name: 'Aakash Tripathi' },
+  keywords: fm.tags?.join(', '),
+  ...(fm.doi && {
+    about: {
+      '@type': 'ScholarlyArticle',
+      headline: fm.paperTitle ?? fm.title,
+      identifier: { '@type': 'PropertyValue', propertyID: 'DOI', value: fm.doi },
+      url: `https://doi.org/${fm.doi}`,
+    },
+  }),
+};
+---
+
+<Layout title={`${fm.title} | Aakash Tripathi`} description={fm.description} type="article" image={ogImage}>
+  <StructuredData data={schema} />
+  <article class="article">
+    <header class="article-hero">
+      <p class="eyebrow">
+        <a href="/blog/">Blog</a> · {fm.short}{fm.minutesRead && <> · {fm.minutesRead} min read</>}
+      </p>
+      <h1 class="article-title" data-long={fm.title.length > 70 ? '' : undefined}>{fm.title}</h1>
+      {fm.subtitle && <p class="article-dek">{fm.subtitle}</p>}
+      {
+        coverImg && (
+          <figure class="article-cover">
+            <div class="article-cover__frame">
+              <Image src={coverImg} alt={fm.coverAlt ?? `Lead figure from ${fm.paperTitle ?? fm.title}`} widths={[720, 1080, 1600, 2000]} sizes="(min-width: 1100px) 1040px, 100vw" loading="eager" />
+            </div>
+            {fm.coverCaption && <figcaption set:html={fm.coverCaption} />}
+          </figure>
+        )
+      }
+    </header>
+
+    <div class="meta-bar">
+      <dl class="meta-inner">
+        {
+          fm.authors?.length > 0 && (
+            <div class="meta-cell meta-cell--authors">
+              <dt>Paper authors</dt>
+              <dd>
+                {fm.authors.map((a, i) => (
+                  <>
+                    <span class:list={[{ me: isMe(a) }]}>{a}</span>
+                    {i < fm.authors.length - 1 && ', '}
+                  </>
+                ))}
+              </dd>
+            </div>
+          )
+        }
+        {
+          fm.affiliations?.length > 0 && (
+            <div class="meta-cell">
+              <dt>Affiliations</dt>
+              <dd>
+                <ul>
+                  {fm.affiliations.map((a) => (
+                    <li>{a}</li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          )
+        }
+        <div class="meta-cell">
+          <dt>Published</dt>
+          <dd>
+            {fm.venue && <em>{fm.venue}</em>}
+            {fm.published && <span class="muted"> · {formatDate(fm.published)}</span>}
+            {fm.role && <span class="meta-role">{fm.role}</span>}
+          </dd>
+        </div>
+        {
+          (fm.doi || fm.links?.length > 0) && (
+            <div class="meta-cell">
+              <dt>Links</dt>
+              <dd class="meta-links">
+                {fm.doi && (
+                  <a class="button button--small" href={`https://doi.org/${fm.doi}`} target="_blank" rel="noopener noreferrer">
+                    DOI
+                  </a>
+                )}
+                {fm.links?.map((l) => (
+                  <a class="button button--small" href={l.url} target="_blank" rel="noopener noreferrer">
+                    {l.label}
+                  </a>
+                ))}
+              </dd>
+            </div>
+          )
+        }
+      </dl>
+    </div>
+
+    <div class="article-grid">
+      {
+        toc.length > 0 && (
+          <nav class="toc" aria-label="Table of contents">
+            <p class="toc__title">Contents</p>
+            <ol>
+              {toc.map((h) => (
+                <li class={`toc__d${h.depth}`}>
+                  <a href={`#${h.slug}`}>{h.text}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
+
+      <div class="article-main">
+        {
+          toc.length > 0 && (
+            <details class="toc-mobile">
+              <summary>Contents</summary>
+              <ol>
+                {toc.map((h) => (
+                  <li class={`toc__d${h.depth}`}>
+                    <a href={`#${h.slug}`}>{h.text}</a>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )
+        }
+
+        <div class="prose">
+          <slot />
+        </div>
+
+        {
+          fm.bibtex && (
+            <section class="cite-block" aria-labelledby="cite-heading">
+              <h2 id="cite-heading">Cite the paper</h2>
+              {fm.citation && <p class="cite-short">{fm.citation}</p>}
+              <div class="cite-bib">
+                <button class="button button--small copy-button" type="button" aria-live="polite" data-copy hidden>
+                  Copy BibTeX
+                </button>
+                <pre tabindex="0">{fm.bibtex.trim()}</pre>
+              </div>
+            </section>
+          )
+        }
+      </div>
+    </div>
+
+    {
+      (prev || next) && (
+        <nav class="article-more" aria-label="More posts">
+          {prev && (
+            <a class="more-card" href={prev.url}>
+              <span class="eyebrow">Previous</span>
+              <strong>{prev.title}</strong>
+            </a>
+          )}
+          {next && (
+            <a class="more-card more-card--next" href={next.url}>
+              <span class="eyebrow">Next</span>
+              <strong>{next.title}</strong>
+            </a>
+          )}
+        </nav>
+      )
+    }
+  </article>
+
+  <script>
+    // Sidenotes are written after the paragraph they annotate; on wide screens move
+    // them before it so the float lines up with the paragraph's first line.
+    const wide = matchMedia('(min-width: 1180px)');
+    const notes = [...document.querySelectorAll<HTMLElement>('.prose > .sidenote')].map((n) => ({
+      n,
+      anchor: n.previousElementSibling,
+    }));
+    const placeNotes = () => notes.forEach(({ n, anchor }) => anchor && (wide.matches ? anchor.before(n) : anchor.after(n)));
+    wide.addEventListener('change', placeNotes);
+    placeNotes();
+  
+    // Highlight the TOC entry for the section in view.
+    const links = new Map(
+      [...document.querySelectorAll<HTMLAnchorElement>('.toc a')].map((a) => [decodeURIComponent(a.hash.slice(1)), a]),
+    );
+    const targets = [...links.keys()].map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    const setActive = () => {
+      let current = targets[0];
+      for (const t of targets) if (t.getBoundingClientRect().top < 120) current = t;
+      links.forEach((a) => a.removeAttribute('aria-current'));
+      if (current) links.get(current.id)?.setAttribute('aria-current', 'true');
+    };
+    if (targets.length) {
+      addEventListener('scroll', setActive, { passive: true });
+      setActive();
+    }
+  
+    document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+  
+      btn.hidden = false;
+      btn.addEventListener('click', async () => {
+        const text = btn.nextElementSibling?.textContent ?? '';
+        try {
+          await navigator.clipboard.writeText(text);
+          btn.textContent = 'Copied';
+        } catch {
+          btn.textContent = 'Copy failed';
+        }
+        setTimeout(() => (btn.textContent = 'Copy BibTeX'), 1600);
+      });
+    });
+  </script>
+</Layout>
+
+
+<style>
+  .article-hero {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 72px var(--gutter) 0;
+    text-align: center;
+  }
+
+  .article-hero .eyebrow a {
+    color: inherit;
+  }
+
+  .article-title {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    margin: 0 auto 0.45em;
+    max-width: 820px;
+  }
+
+  .article-title[data-long] {
+    font-size: clamp(1.75rem, 4vw, 2.6rem);
+  }
+
+  .article-dek {
+    font-size: 1.15rem;
+    color: var(--muted-color);
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .article-cover {
+    width: min(1040px, 100%);
+    margin: 48px auto 0;
+  }
+
+  .article-cover__frame {
+    padding: clamp(10px, 2vw, 24px);
+    background: #fff;
+    border-radius: 18px;
+  }
+
+  .article-cover figcaption {
+    max-width: 820px;
+    margin: 16px auto 0;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    text-align: left;
+    color: var(--muted-color);
+  }
+
+  .article-cover :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 640px;
+    object-fit: contain;
+  }
+
+  /* Meta bar */
+  .meta-bar {
+    border-top: 2px solid var(--rule-color);
+    border-bottom: 1px solid var(--border-color);
+    margin-top: 56px;
+  }
+
+  .meta-inner {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 18px var(--gutter);
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px 28px;
+    font-size: 0.9rem;
+  }
+
+  .meta-cell dd {
+    margin: 0;
+  }
+
+  .meta-cell dt {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--faint-color);
+    margin: 0 0 6px;
+  }
+
+  .meta-cell ul {
+    margin: 0;
+  }
+
+  .meta-cell ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .meta-cell li + li {
+    margin-top: 4px;
+  }
+
+  .meta-role {
+    display: block;
+    margin-top: 4px;
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  .meta-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  @media (max-width: 860px) {
+    .meta-inner {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .meta-cell--authors {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* Three-column reading grid */
+  .article-grid {
+    max-width: 1260px;
+    margin: 48px auto 0;
+    padding: 0 var(--gutter);
+    display: grid;
+    grid-template-columns: 220px minmax(0, 700px) 220px;
+    gap: 40px;
+    justify-content: center;
+    align-items: start;
+  }
+
+  .article-main {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  .toc {
+    grid-column: 1;
+    position: sticky;
+    top: calc(var(--nav-h) + 24px);
+    max-height: calc(100vh - var(--nav-h) - 48px);
+    overflow-y: auto;
+    font-size: 0.86rem;
+  }
+
+  .toc__title,
+  .toc-mobile summary {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--faint-color);
+    margin: 0 0 10px;
+  }
+
+  .toc ol,
+  .toc-mobile ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .toc li {
+    margin: 0;
+  }
+
+  .toc a {
+    display: block;
+    padding: 4px 0 4px 12px;
+    border-left: 2px solid var(--border-color);
+    color: var(--muted-color);
+    line-height: 1.35;
+  }
+
+  .toc .toc__d3 a {
+    padding-left: 24px;
+    font-size: 0.82rem;
+  }
+
+  .toc a:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .toc a:hover {
+    color: var(--heading-color);
+  }
+
+  .toc a[aria-current] {
+    color: var(--primary);
+    border-left-color: var(--primary);
+    font-weight: 600;
+  }
+
+  .toc-mobile {
+    display: none;
+    margin-bottom: 28px;
+    padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    background: var(--surface-bg);
+  }
+
+  .toc-mobile summary {
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .toc-mobile ol {
+    margin-top: 10px;
+  }
+
+  .toc-mobile li {
+    padding: 3px 0;
+  }
+
+  .toc-mobile .toc__d3 {
+    padding-left: 16px;
+    font-size: 0.92em;
+  }
+
+  /* Sidenotes float into the right column */
+  .prose :global(.sidenote) {
+    float: right;
+    clear: right;
+    width: 220px;
+    margin: 0.3em -260px 1em 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--muted-color);
+  }
+
+  .prose :global(.sidenote > :last-child) {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 1179px) {
+    .article-grid {
+      display: block;
+      max-width: 748px;
+      margin-top: 32px;
+    }
+
+    .toc {
+      display: none;
+    }
+
+    .toc-mobile {
+      display: block;
+    }
+
+    .prose :global(.sidenote) {
+      float: none;
+      display: block;
+      width: auto;
+      margin: -0.4em 0 1.2em;
+      padding: 8px 0 8px 14px;
+      border-left: 2px solid var(--border-color);
+    }
+  }
+
+  /* Citation */
+  .cite-block {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .cite-block h2 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+  }
+
+  .cite-short {
+    font-size: 0.9rem;
+    color: var(--muted-color);
+  }
+
+  .cite-bib {
+    position: relative;
+  }
+
+  .cite-bib pre {
+    margin: 0;
+    padding: 14px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    line-height: 1.5;
+    color: var(--muted-color);
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .copy-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+  }
+
+  /* Prev / next */
+  .article-more {
+    max-width: 748px;
+    margin: 56px auto 0;
+    padding: 0 var(--gutter);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .more-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 18px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    color: var(--heading-color);
+    text-decoration: none;
+    transition: border-color 0.15s;
+  }
+
+  .more-card:hover {
+    border-color: var(--primary);
+    color: var(--heading-color);
+  }
+
+  .more-card .eyebrow {
+    margin: 0;
+  }
+
+  .more-card--next {
+    grid-column: 2;
+    text-align: right;
+  }
+
+  @media (max-width: 560px) {
+    .article-more {
+      grid-template-columns: 1fr;
+    }
+
+    .more-card--next {
+      grid-column: 1;
+    }
+  }
+</style>

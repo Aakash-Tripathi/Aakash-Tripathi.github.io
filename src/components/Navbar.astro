@@ -1,71 +1,233 @@
 ---
+import Icon from './Icon.astro';
+import { nav, links, profile } from '../data/cv.js';
+
+const icons = [
+  { name: 'github', label: 'GitHub', url: links.github },
+  { name: 'huggingface', label: 'Hugging Face', url: links.huggingface },
+  { name: 'scholar', label: 'Google Scholar', url: links.scholar },
+  { name: 'linkedin', label: 'LinkedIn', url: links.linkedin },
+] as const;
+
+const path = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.url.pathname}/`;
+const current = (href: string) => (path === href ? 'page' : path.startsWith(href) ? 'true' : undefined);
 ---
 
-<nav class="navbar">
-  <div class="container">
-    <div class="navbar-content">
-      <div class="navbar-logo">
-        <a href="/">Aakash Tripathi</a>
-      </div>
-      <ul class="navbar-links">
-        <li><a href="/">Home</a></li>
-        <li><a href="/publications">Publications</a></li>
-        <li><a href="/research">Research</a></li>
-        <li><a href="/contact">Contact</a></li>
+<header class="site-nav">
+  <nav class="container nav-inner" aria-label="Main">
+    <a class="nav-brand" href="/">{profile.name}</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu">
+      <span class="sr-only">Menu</span>
+      <span class="nav-toggle__bars" aria-hidden="true"></span>
+    </button>
+    <div class="nav-menu" id="nav-menu">
+      <ul class="nav-links">
+        {
+          nav.map((item) => (
+            <li>
+              <a href={item.href} aria-current={current(item.href)}>
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <ul class="nav-icons">
+        {
+          icons.map((i) => (
+            <li>
+              <a href={i.url} target="_blank" rel="noopener noreferrer" aria-label={i.label} title={i.label}>
+                <Icon name={i.name} size={17} />
+              </a>
+            </li>
+          ))
+        }
       </ul>
     </div>
-  </div>
-</nav>
+  </nav>
+</header>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('.nav-toggle');
+  const setOpen = (open: boolean) => {
+    toggle?.setAttribute('aria-expanded', String(open));
+    document.documentElement.classList.toggle('menu-open', open);
+    // Keep focus inside the full-screen menu while it is open.
+    document.querySelectorAll<HTMLElement>('main, footer').forEach((el) => (el.inert = open));
+  };
+  matchMedia('(min-width: 1081px)').addEventListener('change', (e) => e.matches && setOpen(false));
+  toggle?.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'));
+  addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && toggle?.getAttribute('aria-expanded') === 'true') {
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+</script>
 
 <style>
-  .navbar {
-    background-color: var(--color-background);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  .site-nav {
     position: sticky;
     top: 0;
     z-index: 100;
+    background: #000;
   }
 
-  .navbar-content {
+  .nav-inner {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 1rem 0;
+    gap: 24px;
+    min-height: var(--nav-h);
   }
 
-  .navbar-logo a {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--color-secondary);
-  }
-
-  .navbar-links {
-    display: flex;
-    list-style: none;
-    gap: 2rem;
-  }
-
-  .navbar-links a {
-    color: var(--color-text);
+  .nav-brand {
+    font-family: var(--font-heading);
     font-weight: 500;
+    font-size: clamp(1.45rem, 2.2vw, 1.95rem);
+    line-height: 1;
+    color: #fff;
+    text-decoration: none;
+    white-space: nowrap;
+    margin-right: auto;
   }
 
-  .navbar-links a:hover {
-    color: var(--color-primary);
+  .nav-brand:hover {
+    color: #fff;
   }
 
-  @media (max-width: 768px) {
-    .navbar-content {
+  .nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 34px;
+  }
+
+  .nav-links,
+  .nav-icons {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .nav-links {
+    gap: 30px;
+  }
+
+  .nav-icons {
+    gap: 20px;
+  }
+
+  .nav-links a {
+    color: #fff;
+    font-size: 0.92rem;
+    font-weight: 300;
+    text-decoration: none;
+    padding: 4px 0;
+  }
+
+  .nav-links a:hover,
+  .nav-links a[aria-current] {
+    text-decoration: underline;
+    text-underline-offset: 6px;
+  }
+
+  .nav-icons a {
+    display: grid;
+    place-items: center;
+    color: #fff;
+  }
+
+  .nav-icons a:hover {
+    color: var(--primary-hover);
+  }
+
+  .nav-toggle {
+    display: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #fff;
+    cursor: pointer;
+  }
+
+  .nav-toggle__bars,
+  .nav-toggle__bars::before,
+  .nav-toggle__bars::after {
+    display: block;
+    width: 26px;
+    height: 2px;
+    margin: 0 auto;
+    background: currentColor;
+    transition: transform 0.2s;
+  }
+
+  .nav-toggle__bars {
+    position: relative;
+  }
+
+  .nav-toggle__bars::before,
+  .nav-toggle__bars::after {
+    content: '';
+    position: absolute;
+    left: 0;
+  }
+
+  .nav-toggle__bars::before {
+    top: -8px;
+  }
+
+  .nav-toggle__bars::after {
+    top: 8px;
+  }
+
+  @media (max-width: 1080px) {
+    .nav-toggle {
+      display: block;
+    }
+
+    .nav-menu {
+      display: none;
+      position: fixed;
+      inset: var(--nav-h) 0 0 0;
       flex-direction: column;
-      padding: 1rem 0;
+      justify-content: center;
+      gap: 40px;
+      background: #000;
+      overflow-y: auto;
     }
 
-    .navbar-logo {
-      margin-bottom: 0.5rem;
+    :global(.menu-open) .nav-menu {
+      display: flex;
     }
 
-    .navbar-links {
-      gap: 1rem;
+    :global(.menu-open) body {
+      overflow: hidden;
+    }
+
+    :global(.menu-open) .nav-toggle__bars {
+      background: transparent;
+    }
+
+    :global(.menu-open) .nav-toggle__bars::before {
+      transform: translateY(8px) rotate(45deg);
+    }
+
+    :global(.menu-open) .nav-toggle__bars::after {
+      transform: translateY(-8px) rotate(-45deg);
+    }
+
+    .nav-links {
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .nav-links a {
+      font-family: var(--font-heading);
+      font-weight: 500;
+      font-size: 1.9rem;
     }
   }
 </style>

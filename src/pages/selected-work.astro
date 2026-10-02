@@ -1,0 +1,107 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageIntro from '../components/PageIntro.astro';
+import WorkItem from '../components/WorkItem.astro';
+import StructuredData from '../components/StructuredData.astro';
+import { publications, talks, links, profile } from '../data/cv.js';
+
+const group = (id) => publications.find((g) => g.id === id)?.items ?? [];
+const manuscripts = [...group('journal'), ...group('proceedings'), ...group('chapter')];
+const preprints = [...group('preprints'), ...group('dissertation')];
+const abstracts = group('abstracts');
+const total = publications.filter((g) => g.id !== 'abstracts').reduce((n, g) => n + g.items.length, 0);
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@graph': publications
+    .flatMap((g) => g.items)
+    .map((p) => ({
+      '@type': 'ScholarlyArticle',
+      headline: p.title,
+      ...(p.year && { datePublished: String(p.year) }),
+      isPartOf: p.venue,
+      url: p.url,
+      author: p.authors.split(', ').map((name) =>
+        /\bTripathi\b/.test(name)
+          ? { '@type': 'Person', '@id': 'https://aakash-tripathi.github.io/#person', name: 'Aakash Tripathi' }
+          : { '@type': 'Person', name },
+      ),
+    })),
+};
+
+const columns = [
+  [
+    { title: 'Manuscripts', items: manuscripts },
+    { title: 'Talks & Presentations', items: talks },
+  ],
+  [
+    { title: 'Preprints & Dissertation', items: preprints },
+    { title: 'Conference Abstracts', items: abstracts },
+  ],
+];
+---
+
+<Layout
+  title="Selected Work | Aakash Tripathi"
+  description="Manuscripts, preprints, conference abstracts, and talks by Aakash Tripathi on multimodal AI, foundation models, clinical LLMs, and survival analysis in oncology."
+>
+  <StructuredData data={schema} />
+  <PageIntro title="The work I keep coming back to">
+    <p>{profile.summary}</p>
+    <p>
+      {total} publications, {abstracts.length} conference abstracts, and {talks.length} talks and presentations. Authorship order follows each publication, with co-first and
+      corresponding authorship noted where the publication record establishes it. Also on{' '}
+      <a href={links.scholar} target="_blank" rel="noopener noreferrer">Google Scholar</a> and{' '}
+      <a href={links.orcid} target="_blank" rel="noopener noreferrer">ORCID</a>.
+    </p>
+  </PageIntro>
+
+  {
+    columns.map((pair, i) => (
+      <>
+        {i > 0 && <hr class="rule" />}
+        <section class="container lists">
+          {pair.map((col) => (
+            <div>
+              <h2>{col.title}</h2>
+              <ol class="work-list">
+                {col.items.map((item) => (
+                  <WorkItem item={item} />
+                ))}
+              </ol>
+            </div>
+          ))}
+        </section>
+      </>
+    ))
+  }
+</Layout>
+
+<style>
+  .lists {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 72px;
+    padding-top: 72px;
+    padding-bottom: 56px;
+  }
+
+  h2 {
+    font-size: 1.15rem;
+    font-weight: 400;
+    color: var(--muted-color);
+    margin-bottom: 18px;
+  }
+
+  .work-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  @media (max-width: 860px) {
+    .lists {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

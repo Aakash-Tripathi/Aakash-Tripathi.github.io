@@ -1,0 +1,52 @@
+---
+// Row of headline numbers. Keep it to 2-4 items.
+interface Props {
+  items: { value: string; label: string }[];
+}
+
+const { items } = Astro.props;
+---
+
+<dl class="stats">
+  {
+    items.map((it) => (
+      <div class="stats__item">
+        <dt>{it.label}</dt>
+        <dd>{it.value}</dd>
+      </div>
+    ))
+  }
+</dl>
+
+<style>
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 1.8em 0;
+  }
+
+  .stats__item {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 1.7rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--heading-color);
+    font-variant-numeric: lining-nums;
+  }
+
+  dt {
+    font-size: 0.84rem;
+    color: var(--muted-color);
+    line-height: 1.35;
+  }
+</style>

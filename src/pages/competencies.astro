@@ -1,0 +1,207 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageIntro from '../components/PageIntro.astro';
+import { skills, experience, peerReview, mentoring, memberships } from '../data/cv.js';
+import { getProjects } from '../lib/projects.js';
+
+const shortName = Object.fromEntries((await getProjects()).map((p) => [p.slug, p.short]));
+
+// Each skill group gets one sentence from the CV's own responsibilities, plus links to
+// blog posts where the method is used.
+const role = experience[0].bullets;
+const evidence = {
+  'Research methods': {
+    lede: role[1],
+    uses: {
+      'Multimodal representation learning': ['honeybee', 'eagle'],
+      'Foundation model adaptation': ['senmo', 'honeybee'],
+      'Clinical NLP': ['clever'],
+      'Computational pathology': ['honeybee'],
+      'Survival analysis': ['senmo', 'eagle'],
+      'Model attribution': ['eagle', 'hetmoe'],
+    },
+  },
+  'Modeling and inference': { lede: role[2] },
+  Systems: { lede: role[7] },
+  Programming: { lede: role[8] },
+};
+const groups = skills.map((s) => ({ ...s, ...evidence[s.group] }));
+---
+
+<Layout
+  title="Competencies | Aakash Tripathi"
+  description="Research methods, modeling and inference tools, systems, and programming skills of Aakash Tripathi, PhD, with links to where each is used."
+>
+  <PageIntro title="Competencies">
+    <p>
+      The methods and tools I use day to day, grouped the way they appear on my CV. Where a method is the subject of a
+      paper, the link goes to the blog post about that work.
+    </p>
+  </PageIntro>
+
+  {
+    groups.map((g, i) => (
+      <section class:list={['container', 'skill', { 'skill--flip': i % 2 === 1 }]}>
+        <h2>{g.group}</h2>
+        <div>
+          {g.lede && <p class="skill__lede">{g.lede}</p>}
+          <ul>
+            {g.items.map((item) => (
+              <li>
+                <strong>{item}</strong>
+                {g.uses?.[item] && (
+                  <span class="skill__uses">
+                    {' '}
+                    - used in{' '}
+                    {g.uses[item].map((slug, j) => (
+                      <>
+                        {j > 0 && ', '}
+                        <a href={`/blog/${slug}/`}>{shortName[slug] ?? slug}</a>
+                      </>
+                    ))}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    ))
+  }
+
+  <section class="container cv-cta">
+    <a class="button" href="/cv/">View CV</a>
+  </section>
+
+  <hr class="rule" />
+
+  <section class="container extras">
+    <div>
+      <h2>Peer review</h2>
+      <p class="extras__meta">Journal reviewer, {peerReview.period}</p>
+      <ul>
+        {peerReview.journals.map((j) => <li>{j}</li>)}
+      </ul>
+    </div>
+    <div>
+      <h2>Mentoring</h2>
+      <p class="extras__meta">Research collaboration with students and trainees</p>
+      <ul>
+        {
+          mentoring.map((m) => (
+            <li>
+              {m.name} <span class="muted">· {m.affiliation} · {m.period}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+    <div>
+      <h2>Memberships</h2>
+      <ul>
+        {
+          memberships.map((m) => (
+            <li>
+              {m.name}
+              {m.period && <span class="muted"> · {m.period}</span>}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .skill {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 32px 80px;
+    align-items: center;
+    padding-top: 88px;
+    padding-bottom: 32px;
+  }
+
+  .skill h2 {
+    font-size: clamp(2rem, 3.6vw, 2.8rem);
+    margin: 0;
+    text-align: center;
+  }
+
+  .skill--flip h2 {
+    order: 2;
+  }
+
+  .skill__lede {
+    font-size: 0.86rem;
+    color: var(--muted-color);
+  }
+
+  .skill ul {
+    margin: 0;
+    padding-left: 1.1em;
+    font-size: 0.86rem;
+  }
+
+  .skill li {
+    margin-bottom: 0.45em;
+  }
+
+  .skill strong {
+    color: var(--heading-color);
+  }
+
+  .skill__uses {
+    color: var(--muted-color);
+  }
+
+  .cv-cta {
+    display: flex;
+    justify-content: center;
+    padding-top: 72px;
+    padding-bottom: 96px;
+  }
+
+  .extras {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 48px;
+    padding-top: 80px;
+    padding-bottom: 104px;
+  }
+
+  .extras h2 {
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+  }
+
+  .extras__meta {
+    font-size: 0.8rem;
+    color: var(--muted-color);
+  }
+
+  .extras ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.86rem;
+  }
+
+  .extras li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  @media (max-width: 860px) {
+    .skill,
+    .extras {
+      grid-template-columns: 1fr;
+    }
+
+    .skill h2,
+    .skill--flip h2 {
+      order: 0;
+      text-align: left;
+    }
+  }
+</style>

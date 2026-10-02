@@ -1,101 +1,118 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Header from '../components/Header.astro';
-import SectionContainer from '../components/SectionContainer.astro';
-import Breadcrumbs from '../components/Breadcrumbs.astro';
+import PageIntro from '../components/PageIntro.astro';
+import { profile, links } from '../data/cv.js';
+
+const profiles = [
+  { label: 'Google Scholar', url: links.scholar },
+  { label: 'ORCID', url: links.orcid, detail: '0000-0001-7231-0487' },
+  { label: 'GitHub', url: links.github, detail: 'Aakash-Tripathi' },
+  { label: 'Hugging Face', url: links.huggingface, detail: 'Aakash-Tripathi' },
+  { label: 'LinkedIn', url: links.linkedin },
+  { label: 'ResearchGate', url: links.researchgate },
+  { label: 'Lab GitHub', url: links.labGithub, detail: 'lab-rasool' },
+  { label: 'Lab Hugging Face', url: links.labHuggingface, detail: 'Lab-Rasool' },
+];
 ---
 
 <Layout
-  title="Contact - Aakash Tripathi"
-  description="Contact Aakash Tripathi at Moffitt Cancer Center. Find professional contact information, email, phone, LinkedIn, Google Scholar, ORCID, and research affiliations. Connect for collaboration opportunities in medical AI and oncology research."
+  title="Contact | Aakash Tripathi"
+  description="Contact Aakash Tripathi, PhD, at Moffitt Cancer Center: email, phone, and research profiles for collaboration on multimodal AI and clinical LLMs in oncology."
 >
-  <div class="container">
-    <Breadcrumbs items={[
-      { name: "Home", url: "/" },
-      { name: "Contact" }
-    ]} />
-  </div>
-  <Header title="Contact" subtitle="Get in touch" />
-  
-  <SectionContainer title="Contact Information">
-    <div class="contact-content">
-      <div class="contact-text">
-        <p>
-          Thank you for your interest in my research. Please feel free to reach out through any of the following channels:
-        </p>
-        
-        <div class="contact-links">
-          <div class="contact-item">
-            <h3>Professional Profiles</h3>
-            <ul>
-              <li><a href="https://www.linkedin.com/in/aakash-tripathi/" target="_blank">LinkedIn</a></li>
-              <li><a href="https://www.researchgate.net/profile/Aakash-Tripathi-2" target="_blank">ResearchGate</a></li>
-              <li><a href="https://github.com/lab-rasool" target="_blank">GitHub (Lab-Rasool)</a></li>
-              <li><a href="https://huggingface.co/Lab-Rasool" target="_blank">Hugging Face (Lab-Rasool)</a></li>
-              <li><a href="https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en" target="_blank">Google Scholar</a></li>
-              <li><a href="https://orcid.org/0000-0001-7231-0487" target="_blank">ORCID: 0000-0001-7231-0487</a></li>
-            </ul>
-          </div>
-          
-          <div class="contact-item">
-            <h3>Affiliation</h3>
-            <p>
-              Department of Machine Learning<br>
-              H. Lee Moffitt Cancer Center and Research Institute<br>
-              12902 Magnolia Drive<br>
-              Tampa, FL 33612, USA
-            </p>
-          </div>
+  <PageIntro title="Get in touch">
+    <p>For collaborations, talks, or questions about the code and datasets, email is the fastest way to reach me.</p>
+  </PageIntro>
 
-          <div class="contact-item">
-            <h3>Contact Details</h3>
-            <p>
-              <strong>Email:</strong> <a href="mailto:Aakash.Tripathi@moffitt.org">Aakash.Tripathi@moffitt.org</a><br>
-              <strong>Phone:</strong> (404) 234-8483
-            </p>
-            <p>
-              <a href="https://lab.moffitt.org/Rasool/" target="_blank">Rasool Lab</a>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </SectionContainer>
+  <div class="container"><div class="contact">
+    <section class="card">
+      <h2>Email & phone</h2>
+      <p><a class="big" href={`mailto:${profile.email}`}>{profile.email}</a></p>
+      <p><a href={`mailto:${profile.personalEmail}`}>{profile.personalEmail}</a></p>
+      <p class="muted">{profile.phone}</p>
+    </section>
+
+    <section class="card">
+      <h2>Affiliation</h2>
+      <p>
+        {profile.role}, {profile.focus}<br />
+        <a href={profile.organizationUrl} target="_blank" rel="noopener noreferrer">{profile.organization}</a><br />
+        <span class="muted">{profile.location}</span>
+      </p>
+      <p><a href={links.lab} target="_blank" rel="noopener noreferrer">Rasool Lab</a></p>
+    </section>
+
+    <section class="card card--wide">
+      <h2>Profiles</h2>
+      <ul class="profiles">
+        {
+          profiles.map((p) => (
+            <li>
+              <a href={p.url} target="_blank" rel="noopener noreferrer">
+                {p.label}
+              </a>
+              {p.detail && <span class="muted"> · {p.detail}</span>}
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div></div>
 </Layout>
 
 <style>
-  .contact-content {
-    max-width: 800px;
-    margin: 0 auto;
-  }
-  
-  .contact-text {
-    font-size: 1.1rem;
-  }
-  
-  .contact-links {
-    margin-top: 2rem;
+  .contact {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    padding-top: 72px;
+    padding-bottom: 96px;
+    max-width: 920px;
   }
-  
-  .contact-item h3 {
-    color: var(--color-primary);
-    margin-bottom: 1rem;
+
+  .card {
+    padding: 22px 24px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
   }
-  
-  .contact-item ul {
-    list-style-type: none;
+
+  .card--wide {
+    grid-column: 1 / -1;
+  }
+
+  .card h2 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--faint-color);
+    margin-bottom: 12px;
+  }
+
+  .card p {
+    margin: 0 0 6px;
+  }
+
+  .big {
+    font-size: 1.15rem;
+    font-weight: 700;
+    word-break: break-word;
+  }
+
+  .profiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px 24px;
+    list-style: none;
+    margin: 0;
     padding: 0;
   }
-  
-  .contact-item li {
-    margin-bottom: 0.5rem;
+
+  .profiles a {
+    font-weight: 600;
   }
-  
-  @media (max-width: 768px) {
-    .contact-links {
+
+  @media (max-width: 640px) {
+    .contact {
       grid-template-columns: 1fr;
     }
   }

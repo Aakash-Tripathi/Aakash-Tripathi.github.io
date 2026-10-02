@@ -1,0 +1,49 @@
+---
+interface Props {
+  title?: string;
+  variant?: 'neutral' | 'info' | 'success' | 'warning';
+}
+
+const { title, variant = 'neutral' } = Astro.props;
+---
+
+<div class={`note note--${variant}`} role="note">
+  {title && <p class="note__title">{title}</p>}
+  <div class="note__body"><slot /></div>
+</div>
+
+<style>
+  .note {
+    margin: 1.6em 0;
+    padding: 16px 20px;
+    border-left: 3px solid var(--border-color);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    background: var(--surface-bg);
+    font-size: 0.97rem;
+  }
+
+  .note--info {
+    border-left-color: var(--series-1);
+    background: color-mix(in srgb, var(--series-1) 7%, var(--surface-bg));
+  }
+
+  .note--success {
+    border-left-color: var(--series-3);
+    background: color-mix(in srgb, var(--series-3) 8%, var(--surface-bg));
+  }
+
+  .note--warning {
+    border-left-color: var(--series-4);
+    background: color-mix(in srgb, var(--series-4) 9%, var(--surface-bg));
+  }
+
+  .note__title {
+    font-weight: 700;
+    color: var(--heading-color);
+    margin: 0 0 0.35em;
+  }
+
+  .note__body > :global(:last-child) {
+    margin-bottom: 0;
+  }
+</style>

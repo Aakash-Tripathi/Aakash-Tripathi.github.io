@@ -1,0 +1,36 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import BlogCard from '../../components/BlogCard.astro';
+import { getProjects } from '../../lib/projects.js';
+
+const posts = await getProjects();
+---
+
+<Layout
+  title="Blog | Aakash Tripathi"
+  description="Long-form posts on Aakash Tripathi's research: HONeYBEE patient embeddings, LLM extraction from pathology reports, multimodal survival modeling, MINDS, SeNMo, and HetMoE."
+>
+  <h1 class="sr-only">Blog</h1>
+  <h2 class="sr-only">All posts</h2>
+  <section class="container posts">
+    {posts.map((p) => <BlogCard post={p} />)}
+  </section>
+</Layout>
+
+<style>
+  .posts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 88px 32px;
+    max-width: 1140px;
+    padding-top: 56px;
+    padding-bottom: 120px;
+  }
+
+  @media (max-width: 760px) {
+    .posts {
+      grid-template-columns: 1fr;
+      gap: 64px;
+    }
+  }
+</style>

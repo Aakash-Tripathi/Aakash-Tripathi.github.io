@@ -1,0 +1,242 @@
+---
+layout: ../../layouts/ArticleLayout.astro
+title: "MINDS: linking public cancer repositories into ML-ready cohorts"
+short: "MINDS"
+subtitle: "A metadata-first cloud framework that consolidates 41,499 open-access cancer cases into one queryable warehouse and fetches images and omics on demand."
+description: "MINDS links clinical and biospecimen records from NCI cancer data commons into one SQL-queryable warehouse and assembles multimodal ML cohorts on demand."
+published: "2024-03-02"
+venue: "Sensors"
+role: "Developed MINDS; co-first and corresponding author"
+doi: "10.3390/s24051634"
+paperTitle: "Building Flexible, Scalable, and Machine Learning-Ready Multimodal Oncology Datasets"
+authors: ["Aakash Tripathi", "Asim Waqas", "Kavya Venkatesan", "Yasin Yilmaz", "Ghulam Rasool"]
+affiliations: ["Department of Machine Learning, Moffitt Cancer Center & Research Institute", "Department of Electrical Engineering, University of South Florida"]
+links: [{label: "Paper", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC10933897/"}, {label: "Preprint", url: "https://arxiv.org/abs/2310.01438"}, {label: "Code", url: "https://github.com/lab-rasool/MINDS"}, {label: "PyPI", url: "https://pypi.org/project/med-minds/"}, {label: "Docs", url: "https://lab-rasool.github.io/MINDS/"}]
+tags: ["data integration", "multimodal", "cloud", "cohort building", "reproducibility"]
+order: 4
+citation: "Tripathi A, Waqas A, Venkatesan K, Yilmaz Y, Rasool G. Building flexible, scalable, and machine learning-ready multimodal oncology datasets. Sensors. 2024;24(5):1634. doi:10.3390/s24051634"
+bibtex: |
+  @article{tripathi2024minds,
+    title   = {Building Flexible, Scalable, and Machine Learning-Ready Multimodal Oncology Datasets},
+    author  = {Tripathi, Aakash and Waqas, Asim and Venkatesan, Kavya and Yilmaz, Yasin and Rasool, Ghulam},
+    journal = {Sensors},
+    year    = {2024},
+    volume  = {24},
+    number  = {5},
+    pages   = {1634},
+    doi     = {10.3390/s24051634}
+  }
+coverAlt: "Architecture diagram in four panels. A: sources (NCI Genomic Data Commons, with UCSC Xena, cBioPortal and future databases as expansions) send clinical and biospecimen metadata as TSV and JSON files. B: AWS Lake Formation with an S3 ingest bucket, AWS Lambda, AWS Glue and the Glue Data Catalog. C: AWS data warehouse (RDS MySQL, Redshift) and analytics (Athena, QuickSight). D: CRDC repositories PDC, IDC and GDC feed unstructured data download tools through their APIs, producing a data folder of EHR, raw data and a JSON manifest for the user."
+coverCaption: |-
+  The MINDS architecture on AWS. (A) Structured data is acquired from oncology sources, currently the GDC, with UCSC Xena and cBioPortal as possible additions. (B) An S3 bucket, Glue and Lambda catalog and process the data in an AWS data lake. (C) RDS and Redshift hold it as a relational warehouse, which Athena and QuickSight use for analytics and visualization. (D) Users query the structured data, and SQL queries pull the cohort's unstructured data from the PDC, GDC and IDC through the CRDC APIs. Reproduced from <a href='https://doi.org/10.3390/s24051634'>Tripathi et al. (2024)</a>, <em>Sensors</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>.
+---
+
+import Sidenote from '../../components/article/Sidenote.astro';
+import Note from '../../components/article/Note.astro';
+import Figure from '../../components/article/Figure.astro';
+import BarChart from '../../components/article/BarChart.astro';
+import Stats from '../../components/article/Stats.astro';
+import { Image } from 'astro:assets';
+import traditionalImg from '../../assets/blog/minds/traditional-vs-minds.png';
+import crawlerImg from '../../assets/blog/minds/glue-crawler.png';
+import quicksightImg from '../../assets/blog/minds/quicksight-dashboards.png';
+import workflowImg from '../../assets/blog/minds/cohort-workflow.png';
+
+A multimodal oncology model starts with a practical question: for these patients, where is everything? Clinical and genomic records for a lung cancer cohort may sit in the NCI Genomic Data Commons (GDC), the CT, MRI and PET scans from the same studies take a different path into an imaging archive, and proteomics lives in yet another portal. Each one has its own API, schema and query method. In the paper we put it plainly: piecing together data manually across these silos is painstakingly difficult.
+
+MINDS, the Multimodal Integration of Oncology Data System, is our answer to that problem. It pulls the structured clinical and biospecimen records from public cancer repositories into one patient-centric warehouse. Researchers define a cohort with SQL, and MINDS then fetches the matching slides, scans and omics files from the repositories that host them. The large files are never copied into MINDS itself. In the Sensors paper, MINDS consolidates 41,499 open-access cases into a 25.85 MB structured extract and answers typical single-table queries in under 5 seconds on average.[^paper]
+
+I developed MINDS. Asim Waqas and I share first authorship, and I am the paper's corresponding author. Kavya Venkatesan and Yasin Yilmaz are co-authors, and Ghulam Rasool supervised the work.
+
+<Figure caption="A traditional cohort-study ML pipeline (left) needs its own data wrangling for every new data source, which slows the validation and expansion of models on new data. With MINDS (right), researchers draw training data and additional cohorts from one integrated platform. Reproduced from <a href='https://doi.org/10.3390/s24051634'>Tripathi et al. (2024)</a>, <em>Sensors</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>." wide={true}>
+<Image src={traditionalImg} alt="Two-panel diagram. Left, the traditional pipeline: a primary and an additional data source each pass through separate data wrangling into training data, then feature engineering, model training, a trained model and validation by peer researchers. Right, the MINDS-aided pipeline: MINDS feeds feature engineering and model training directly and supplies additional cohorts for peer validation." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+## Why the data is scattered
+
+Public cancer data is not missing. It is spread across systems built for different modalities. In the NCI Center for Cancer Genomics pipeline, tissue moves through collection and processing, genome characterization and genomic data analysis before the results are released through the GDC.[^gdc] Imaging from the same studies follows a separate route. The NCI Cancer Research Data Commons (CRDC) was set up to connect these resources under the FAIR principles, and its repositories include the GDC, the Proteomics Data Commons (PDC) and the Imaging Data Commons (IDC).[^pdc][^idc]
+
+<Sidenote>FAIR stands for Findable, Accessible, Interoperable and Reusable. The CRDC applies it across NCI data commons, each of which hosts a specific data type.</Sidenote>
+
+The Cancer Data Aggregator (CDA) adds a unified search across those commons.[^cda] At the time of the paper, it had two limits that mattered for building ML datasets. Its mapping was not real-time: in September 2023, a CDA query for patients whose primary diagnosis site was lung returned 4,870 cases, while the GDC data portal held 12,267. It is also confined to CRDC-managed data, so resources such as cBioPortal cannot be queried through it.
+
+The paper lists five gaps in existing approaches:
+
+- consolidation has mostly covered structured clinical records, not imaging, omics or pathology;
+- repositories expose proprietary APIs and schemas, with no standard interface across them;
+- on-premises systems limit how far storage and compute can scale;
+- dynamic dataset extracts make it hard to trace which data trained which model;
+- access controls are coarse-grained.
+
+## Design: metadata first
+
+We designed MINDS around five requirements. It should minimize large-scale unstructured storage, scale both horizontally and vertically, add new data sources easily, track data from ingestion to training, and place audit checkpoints at every stage of the pipeline.
+
+The first requirement shapes everything else. MINDS stores no whole slide images or radiology scans. It keeps only structured and semi-structured records, such as clinical and biospecimen metadata and identifiers, and uses them to decide what to download later. Unstructured data stays in its source repository until a user builds a cohort that needs it.
+
+Underneath, MINDS is a two-tier data lakehouse on Amazon Web Services: a data lake that takes raw records as they arrive, and a data warehouse that holds the refined relational tables used for analysis.
+
+<Sidenote>A warehouse is "schema-on-write": the schema is fixed before data is loaded, which makes queries fast. A lake is "schema-on-read": structure is applied only when data is queried, so it accepts heterogeneous raw data.</Sidenote>
+
+<Note title="Key takeaway" variant="info">
+
+MINDS does not try to be another copy of the commons. It is a compact, harmonized index of patients and their clinical and biospecimen records. The index is small enough to query interactively, and its case IDs tell the download tools which images, slides and omics files to fetch from the source repositories.
+
+</Note>
+
+## How it works
+
+### Acquisition and updates
+
+For the first version we used the GDC as the primary structured source. The paper describes it as holding clinical, biospecimen and molecular data for over 86,000 cases across 78 projects, with more than 3 petabytes of data from programs such as TCGA and TARGET as of 2023. We pull the TSV and JSON files for all public cases. On the clinical side these cover clinical, exposure, family history, follow-up and pathology detail records. On the biospecimen side they cover aliquot, analyte, portion, sample and slide records. The files are staged in an Amazon S3 ingest bucket, and AWS Lake Formation turns that bucket into a queryable data lake.
+
+Acquisition repeats on a schedule. ETL routines run every 12 hours, using the GDC REST API to fetch cases, files and metadata added since the last timestamp. When new data lands in the bucket, AWS Lambda triggers the Glue crawlers, so only the difference between the bucket and the lake is processed. The paper names UCSC Xena and cBioPortal as further platforms the structured pipeline can integrate.
+
+### Harmonizing to one model
+
+Raw downloads come in different shapes: JSON clinical documents describe patients differently from TSV biospecimen exports. We use the GDC data model as the integration schema. It is a directed acyclic graph whose nodes are entities such as cases, samples, files and read groups, and whose edges are relationships such as a sample that is `derived_from` a case.
+
+The ETL runs on AWS Glue 4.0. Its crawlers read the GDC node schemas from their YAML definitions, parse the incoming JSON and map each property to a column in a Glue table. In this way the graph becomes a relational view. Child records keep the IDs of their parent case and file, so the links can be rebuilt with joins. For sources that do not fit the existing tables, Glue schema evolution can extend a definition or create a new table.
+
+<details>
+<summary>The five-step Glue crawler workflow</summary>
+
+1. Open access-controlled connections to the source databases.
+2. Apply any custom classifiers to catalog the data and generate metadata.
+3. Use the built-in classifiers for the remaining extract-transform-load work.
+4. Merge the catalog tables into a single database, resolving conflicts and removing duplicates.
+5. Upload the catalog to a data store for analytics.
+
+</details>
+
+<Figure caption="The AWS Glue crawler automates ETL in MINDS in five steps: (1) establish secure database connections, (2) apply custom classifiers to catalog raw data, (3) transform data with built-in classifiers, (4) merge classifier outputs into unified databases and (5) upload the final catalog to the processed data stores. Reproduced from <a href='https://doi.org/10.3390/s24051634'>Tripathi et al. (2024)</a>, <em>Sensors</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>.">
+<Image src={crawlerImg} alt="Diagram of the Glue crawler workflow. Data stores (Amazon RDS, Amazon S3, Amazon Redshift, JDBC) connect to the crawler in step 1; custom classifiers (step 2) and built-in classifiers (step 3) produce metadata tables that are merged into the Data Catalog (step 4), which is uploaded back to the data stores in step 5." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 700px, 100vw" />
+</Figure>
+
+### Warehouse and serving
+
+The cataloged tables are loaded into Amazon Redshift, the primary analytical warehouse. An RDS MySQL cluster handles inserts and updates as new data arrives, so ad hoc analysis does not slow the update path. Redshift Spectrum queries the raw files in S3 directly, and the Glue Data Catalog serves as the shared metadata store for Athena, QuickSight and SageMaker.
+
+<Figure caption="QuickSight analytics generated from MINDS clinical data, as examples of the dashboard's cohort exploration. Each panel counts records by one field: (a) year of death, (b) cause of death, (c) gender, (d) ethnicity, (e) classification of tumor and (f) progression or recurrence. Reproduced from <a href='https://doi.org/10.3390/s24051634'>Tripathi et al. (2024)</a>, <em>Sensors</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>.">
+<Image src={quicksightImg} alt="Six QuickSight charts in a grid: a histogram of record counts by year of death from 1990 to 2022 peaking around 2008, a bar chart by cause of death led by cancer related, pie charts by gender and by ethnicity, and bar charts by tumor classification and by progression or recurrence, where not reported is the largest category." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 700px, 100vw" />
+</Figure>
+
+There are two ways to use the result. QuickSight dashboards let researchers explore distributions and filter on fields such as age, gender, ethnicity, tumor grade, treatment type, year of diagnosis and survival. For pipelines, an open-source Python toolkit runs the cohort workflow. A SQL query returns a pandas DataFrame of matching clinical records, or a list of unique case IDs that the toolkit uses to call the GDC, IDC and PDC APIs. Downloads go into a top-level `/raw` folder with one subfolder per case, together with JSON manifests that record file IDs, types and sources. Each cohort dataset gets a unique version ID, and any change creates a new version.
+
+<Sidenote>Versioning is tied to the cohort query. Researchers can therefore identify the exact dataset behind each model version, and the manifest records which query and sources produced it.</Sidenote>
+
+<Figure caption="The MINDS workflow from query to cohort data. A query for structured data runs against the consolidated clinical database and returns a pandas DataFrame of matching patient records. A query for unstructured data returns the cohort's unique case IDs, which are used to retrieve images, genomic sequences and pathology slides from the GDC, PDC and IDC. Reproduced from <a href='https://doi.org/10.3390/s24051634'>Tripathi et al. (2024)</a>, <em>Sensors</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>.">
+<Image src={workflowImg} alt="Flowchart: a user's query reaches a data-type decision. The structured branch runs a query against the EHR data and returns cohort data. The unstructured branch calls Get Cohort, produces case IDs, runs the downloader and, by source, fetches multimodal data from GDC, PDC and IDC into the cohort data returned to the user." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 700px, 100vw" />
+</Figure>
+
+### Security and portability
+
+Data in S3 is encrypted at rest with 256-bit AES keys managed through AWS KMS, and traffic is encrypted with TLS 1.2. IAM policies control access at the resource and action level, and VPC endpoints prevent public exposure of the data. Lake Formation adds column-level access control. CloudTrail and CloudWatch provide audit logs. Multi-AZ RDS, versioned S3 buckets and cross-region replication protect against data loss.
+
+The design aims to avoid depending on a single provider. The paper maps each AWS component to a Google Cloud equivalent: Cloud Data Fusion for Glue, BigQuery for Redshift, Cloud SQL for RDS, Cloud Functions and Cloud Run for Lambda, and Looker for QuickSight. It also describes an on-premise mode: a Docker setup that bootstraps a MySQL database with the consolidated schema, and a lightweight Flask app in place of the dashboards.
+
+## What we measured
+
+<Stats items={[
+  {value: '41,499', label: 'open-access cases consolidated'},
+  {value: '25.85 MB', label: 'structured extract held in MINDS'},
+  {value: '< 5 s', label: 'average single-table query'},
+  {value: '≤ 15 s', label: 'queries spanning 8+ tables'}
+]} />
+
+The 41,499 cases come from open-access data, which can be used without access restrictions. Table 1 of the paper sets the size of the MINDS extract against the full holdings of each commons.
+
+<Figure caption="Storage and case counts reported in Table 1 of the paper. MINDS holds only structured clinical, biospecimen and molecular metadata. The repository sizes are total holdings, including raw images, sequences and slides.">
+
+| Data source | Storage size | Cases |
+| --- | ---: | ---: |
+| MINDS | 25.85 MB | 41,499 |
+| PDC | 36 TB | 3,081 |
+| GDC | 3.78 PB (17.68 TB public) | 86,962 |
+| IDC | 40.96 TB | 63,788 |
+
+</Figure>
+
+The cases table accounts for 10.24 MB of the extract, followed by genomic variant calls and read groups. Because the extract is this small, cohort filtering can run on a single commodity machine before any raw data is transferred.
+
+The cohort also mixes data from different technology eras. TCGA contributes 11,315 cases with molecular profiling from earlier platforms, and Foundation Medicine contributes 18,004 cases from contemporary next-generation sequencing panels. The paper argues that this mix helps models learn biological patterns that hold across platforms rather than artifacts specific to one assay.
+
+<Figure caption="Cases per program among the GDC open-access cases in MINDS (Table 2 of the paper). The eleven largest of nineteen programs are shown. The other eight (WCDT, APOLLO, Exceptional Responders, OHSU, MP2PRT, EAGLE, ORGANOID and CTSP) contribute between 44 and 99 cases each.">
+<BarChart rows={[
+  {label: 'Foundation Medicine', value: 18004},
+  {label: 'TCGA', value: 11315, note: 'The Cancer Genome Atlas'},
+  {label: 'TARGET', value: 6542},
+  {label: 'CPTAC', value: 1526},
+  {label: 'MMRF', value: 995, note: 'Multiple Myeloma Research Foundation'},
+  {label: 'BEATAML1.0', value: 756},
+  {label: 'NCICCR', value: 481},
+  {label: 'REBC', value: 440},
+  {label: 'CGCI', value: 371},
+  {label: 'Count Me In', value: 296},
+  {label: 'HCMI', value: 228, note: 'Human Cancer Model Initiative'}
+]} min={0} max={20000} decimals={0} mark="bar" axisLabel="Cases in MINDS" />
+</Figure>
+
+For query speed, we timed more than 24,000 SQL invocations, from simple filters to queries joining multiple data domains. Typical single-table queries averaged under 5 seconds. Queries spanning 8 or more tables, across metadata for thousands of cases, finished within 15 seconds. Redshift scales out because cohort queries are read-only: doubling the number of cluster nodes halved the runtime of intensive 8-table cohort queries.
+
+<Note title="How to read these numbers" variant="warning">
+
+The 25.85 MB extract holds metadata and identifiers. The images, sequences and slides stay in their repositories, and the storage saving comes from deferring those transfers until a cohort needs them. The paper presents its first cohort-construction timings as preliminary experiments.
+
+</Note>
+
+## Limitations
+
+The paper's own discussion names the main limits:
+
+- **Public data only.** MINDS currently uses open-access cases. Including controlled data, for example through privacy-preserving methods, is listed as future work.
+- **No raw imagery in the warehouse.** Ingesting raw clinical images and video directly is a primary constraint. We proposed learned embeddings as a compact way to bring imaging content into the system.
+- **Unstructured notes.** Bringing in free-text physician notes would need pretrained clinical language models.
+- **Polling, not events.** Updates arrive through scheduled polling. Webhooks and event notifications would give more real-time incremental updates without excessive API calls.
+- **One cloud in practice.** The implementation runs on AWS. The Google Cloud mapping is a design, and replication on Google Cloud or Azure is listed as future work.
+
+<Sidenote>The paper also suggests the same consolidation components could serve other medical areas, for example COVID-19 data from the Medical Imaging and Data Resource Center (MIDRC).</Sidenote>
+
+## Where it went next
+
+In a JNCCN 2024 abstract, Asim Waqas, Ghulam Rasool and I described the next phase of MINDS around three goals: building benchmark datasets from multimodal data, handling large-scale multivariate time-series data for temporal predictive models, and acting as a store of contextual knowledge for language models through embeddings from clinical foundation models such as GatorTron.[^jnccn] That abstract names TCGA, The Cancer Imaging Archive (TCIA) and institutional electronic health records as sources, and says our ongoing work aims to produce curated benchmark datasets spanning over 20 cancer types.
+
+MINDS is now distributed on PyPI as `med-minds`.[^pypi] The cloud version is in closed beta, and the database can also be recreated locally on PostgreSQL. The repository lists the projects being brought into MINDS, including imaging collections, for a total of 115,974 patients.[^code]
+
+MINDS also supplies data to our later work. In [HONeYBEE](/blog/honeybee/), we obtained the raw TCGA data through MINDS.[^honeybee]
+
+## Resources
+
+- **Paper**: *Sensors* 24(5):1634, open access, published 2 March 2024.[^paper]
+- **Preprint**: arXiv 2310.01438, first posted 30 September 2023.[^preprint]
+- **Code**: `lab-rasool/MINDS` on GitHub, with the `med-minds` Python package and documentation.[^code]
+- **Follow-up abstract**: JNCCN 22(2.5), BIO24-030.[^jnccn]
+
+The snippet below is adapted from the README's usage section. It assumes a local PostgreSQL database configured through a `.env` file:
+
+```python
+import med_minds
+
+# Populate or refresh the local database
+med_minds.update()
+
+# Query harmonized clinical records into a pandas DataFrame
+query = "SELECT * FROM clinical WHERE project_project_id = 'TCGA-LUAD' LIMIT 10"
+df = med_minds.query(query)
+
+# Build a cohort from the query and download its files
+query_cohort = med_minds.build_cohort(query=query, output_dir="./data")
+query_cohort.stats()
+query_cohort.download(threads=12, exclude=["Slide Image"])
+```
+
+[^paper]: Tripathi A, Waqas A, Venkatesan K, Yilmaz Y, Rasool G. Building Flexible, Scalable, and Machine Learning-Ready Multimodal Oncology Datasets. *Sensors*. 2024;24(5):1634. [doi:10.3390/s24051634](https://doi.org/10.3390/s24051634). Open-access full text: [PMC10933897](https://pmc.ncbi.nlm.nih.gov/articles/PMC10933897/).
+[^preprint]: Tripathi A, Waqas A, Venkatesan K, Yilmaz Y, Rasool G. Building Flexible, Scalable, and Machine Learning-ready Multimodal Oncology Datasets. arXiv:2310.01438. [arxiv.org/abs/2310.01438](https://arxiv.org/abs/2310.01438).
+[^code]: MINDS source code and README: [github.com/lab-rasool/MINDS](https://github.com/lab-rasool/MINDS). Documentation: [lab-rasool.github.io/MINDS](https://lab-rasool.github.io/MINDS/).
+[^pypi]: `med-minds` on the Python Package Index: [pypi.org/project/med-minds](https://pypi.org/project/med-minds/).
+[^jnccn]: Tripathi A, Waqas A, Rasool G. BIO24-030: Unifying Multimodal Data, Time Series Analytics, and Contextual Medical Memory: Introducing MINDS as an Oncology-Centric Cloud-Based Platform. *J Natl Compr Canc Netw*. 2024;22(2.5). [doi:10.6004/jnccn.2023.7305](https://doi.org/10.6004/jnccn.2023.7305).
+[^gdc]: Grossman RL, Heath AP, Ferretti V, et al. Toward a shared vision for cancer genomic data. *N Engl J Med*. 2016;375:1109-1112. [doi:10.1056/NEJMp1607591](https://doi.org/10.1056/NEJMp1607591). GDC data portal: [portal.gdc.cancer.gov](https://portal.gdc.cancer.gov/).
+[^pdc]: NCI Proteomic Data Commons: [pdc.cancer.gov](https://pdc.cancer.gov/).
+[^idc]: NCI Imaging Data Commons portal: [portal.imaging.datacommons.cancer.gov](https://portal.imaging.datacommons.cancer.gov/).
+[^cda]: NCI Cancer Data Aggregator: [datacommons.cancer.gov](https://datacommons.cancer.gov/explore/core-standards-services#cancer-data-aggregator).
+[^honeybee]: Tripathi A, Waqas A, Schabath MB, Yilmaz Y, Rasool G. HONeYBEE: enabling scalable multimodal AI in oncology through foundation model-driven embeddings. *npj Digit Med*. 2025;8:622. [doi:10.1038/s41746-025-02003-4](https://doi.org/10.1038/s41746-025-02003-4). See the Data availability section.

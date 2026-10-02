@@ -7,65 +7,77 @@ export interface Props {
   title: string;
   description?: string;
   image?: string;
-  author?: string;
   type?: string;
   keywords?: string;
 }
 
 const {
   title,
-  description = "Aakash Tripathi's research portfolio showcasing education, publications, and research in multimodal medical AI and deep learning for oncology.",
-  image = "https://aakash-tripathi.github.io/assets/profile-photo.jpg",
-  author = "Aakash Tripathi",
-  type = "website",
-  keywords = "Aakash Tripathi, medical AI, multimodal AI, deep learning, oncology, cancer research, computational pathology, precision medicine, multi-omics, machine learning, HONeYBEE, SeNMo, CLEVER, EAGLE, Moffitt Cancer Center, digital pathology, clinical NLP, foundation models, transformers, graph neural networks"
+  description = 'Aakash Tripathi, PhD: generative and multimodal AI research scientist in precision oncology at Moffitt Cancer Center. Patient embeddings, foundation models, clinical LLMs, and survival analysis.',
+  image = '/assets/profile-photo.jpg',
+  type = 'website',
+  keywords = 'Aakash Tripathi, multimodal AI, foundation models, large language models, oncology, precision oncology, survival analysis, patient embeddings, clinical NLP, computational pathology, HONeYBEE, MINDS, CLEVER, EAGLE, SeNMo, Moffitt Cancer Center',
 } = Astro.props;
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
-const siteUrl = "https://aakash-tripathi.github.io";
+const imageURL = new URL(image, Astro.site).href;
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="darkreader-lock" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#000000" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap"
+    />
 
-    <!-- Primary Meta Tags -->
     <title>{title}</title>
-    <meta name="title" content={title} />
     <meta name="description" content={description} />
-    <meta name="author" content={author} />
+    <meta name="author" content="Aakash Tripathi" />
     <meta name="keywords" content={keywords} />
     <link rel="canonical" href={canonicalURL} />
 
-    <!-- Open Graph / Facebook -->
     <meta property="og:type" content={type} />
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content={image} />
-    <meta property="og:site_name" content="Aakash Tripathi - Research Portfolio" />
+    <meta property="og:image" content={imageURL} />
+    <meta property="og:site_name" content="Aakash Tripathi" />
     <meta property="og:locale" content="en_US" />
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content={canonicalURL} />
-    <meta property="twitter:title" content={title} />
-    <meta property="twitter:description" content={description} />
-    <meta property="twitter:image" content={image} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageURL} />
 
-    <!-- Additional SEO -->
     <meta name="robots" content="index, follow" />
-    <meta name="language" content="English" />
-    <meta name="revisit-after" content="7 days" />
     <meta name="google-site-verification" content="google4f18f8eacc8abdf9" />
+    <noscript>
+      <style is:inline>
+        @media (max-width: 1080px) {
+          .nav-toggle { display: none !important; }
+          .nav-inner { flex-wrap: wrap; }
+          .nav-menu { display: flex !important; position: static !important; flex-wrap: wrap; gap: 12px 24px !important; padding-bottom: 16px; }
+          .nav-links { flex-direction: row !important; flex-wrap: wrap; }
+          .nav-links a { font-size: 1rem !important; }
+        }
+      </style>
+    </noscript>
+    <slot name="head" />
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
     <Navbar />
-    <main>
+    <main id="main">
       <slot />
     </main>
     <Footer />

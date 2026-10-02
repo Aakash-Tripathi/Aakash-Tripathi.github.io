@@ -1,0 +1,89 @@
+---
+// One manuscript, abstract, or talk in the Selected Work lists.
+import { isMe } from '../lib/projects.js';
+
+interface Props {
+  item: Record<string, any>;
+}
+
+const { item } = Astro.props;
+const authors: string[] = item.authors.split(', ');
+const meta = [item.venue, item.details ?? item.date].filter(Boolean).join(' · ');
+---
+
+<li class="work">
+  <h3>{item.title}</h3>
+  <p class="work__authors">
+    {
+      authors.map((a, i) => (
+        <>
+          <span class:list={[{ me: isMe(a) }]}>{a}</span>
+          {i < authors.length - 1 && ', '}
+        </>
+      ))
+    }
+  </p>
+  <p class="work__meta">
+    {meta}
+    {item.note && <span class="badge">{item.note}</span>}
+  </p>
+  {
+    (item.url || item.code || item.project) && (
+      <p class="work__links">
+        {item.url && (
+          <a href={item.url} target="_blank" rel="noopener noreferrer">
+            {item.urlLabel ?? item.url.replace(/^https?:\/\/(www\.)?/, '')}
+          </a>
+        )}
+        {item.code && (
+          <a href={item.code} target="_blank" rel="noopener noreferrer">
+            Code
+          </a>
+        )}
+        {item.project && <a href={`/blog/${item.project}/`}>Read the blog post</a>}
+      </p>
+    )
+  }
+</li>
+
+<style>
+  .work {
+    padding: 0 0 40px;
+  }
+
+  h3 {
+    font-size: clamp(1.15rem, 1.7vw, 1.4rem);
+    line-height: 1.4;
+    margin: 0 0 10px;
+  }
+
+  .work p {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.75;
+  }
+
+  .work__authors {
+    color: var(--muted-color);
+  }
+
+  .work__authors span {
+    white-space: nowrap;
+  }
+
+  .work__meta {
+    color: var(--muted-color);
+  }
+
+  .work__meta .badge {
+    margin-left: 8px;
+  }
+
+  .work__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    margin-top: 6px !important;
+    word-break: break-word;
+  }
+</style>

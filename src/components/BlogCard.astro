@@ -1,0 +1,87 @@
+---
+import { Image } from 'astro:assets';
+import { formatDate, coverCredit } from '../lib/projects.js';
+import { cover } from '../lib/images.js';
+
+interface Props {
+  post: Record<string, any>;
+  excerpt?: boolean;
+}
+
+const { post: p, excerpt = true } = Astro.props;
+const img = cover(p.slug);
+---
+
+<article class="post-card">
+  <a class="post-card__image" href={p.url} tabindex="-1" aria-hidden="true" title={coverCredit(p)}>
+    {img && <Image src={img} alt="" widths={[480, 720, 1040]} sizes="(min-width: 900px) 600px, 100vw" />}
+  </a>
+  <p class="post-card__date">{formatDate(p.published)} · {p.short}</p>
+  <h3><a href={p.url}>{p.title}</a></h3>
+  {excerpt && <p class="post-card__excerpt">{p.subtitle}</p>}
+  <a class="post-card__more" href={p.url} aria-label={`Read more: ${p.title}`}>Read More</a>
+</article>
+
+<style>
+  .post-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .post-card__image {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    padding: 18px;
+    background: #fff;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+
+  .post-card__image :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.4s ease;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .post-card:hover .post-card__image :global(img) {
+      transform: scale(1.03);
+    }
+  }
+
+  .post-card__date {
+    font-size: 0.78rem;
+    margin: 0 0 6px;
+    color: var(--muted-color);
+  }
+
+  h3 {
+    font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+    margin: 0 0 10px;
+    max-width: 30ch;
+  }
+
+  h3 a {
+    text-decoration: none;
+  }
+
+  h3 a:hover {
+    text-decoration: underline;
+  }
+
+  .post-card__excerpt {
+    font-size: 0.84rem;
+    color: var(--muted-color);
+    max-width: 52ch;
+    margin: 0 0 10px;
+  }
+
+  .post-card__more {
+    font-size: 0.8rem;
+  }
+</style>
