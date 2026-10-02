@@ -1,5 +1,5 @@
 ---
-layout: ../../layouts/ArticleLayout.astro
+layout: ../../../layouts/ArticleLayout.astro
 title: "MINDS: linking public cancer repositories into ML-ready cohorts"
 short: "MINDS"
 subtitle: "A metadata-first cloud framework that consolidates 41,499 open-access cancer cases into one queryable warehouse and fetches images and omics on demand."
@@ -31,20 +31,28 @@ coverCaption: |-
   The MINDS architecture on AWS. (A) Structured data is acquired from oncology sources, currently the GDC, with UCSC Xena and cBioPortal as possible additions. (B) An S3 bucket, Glue and Lambda catalog and process the data in an AWS data lake. (C) RDS and Redshift hold it as a relational warehouse, which Athena and QuickSight use for analytics and visualization. (D) Users query the structured data, and SQL queries pull the cohort's unstructured data from the PDC, GDC and IDC through the CRDC APIs. Reproduced from <a href='https://doi.org/10.3390/s24051634'>Tripathi et al. (2024)</a>, <em>Sensors</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>.
 ---
 
-import Sidenote from '../../components/article/Sidenote.astro';
-import Note from '../../components/article/Note.astro';
-import Figure from '../../components/article/Figure.astro';
-import BarChart from '../../components/article/BarChart.astro';
-import Stats from '../../components/article/Stats.astro';
+import Sidenote from '../../../components/article/Sidenote.astro';
+import Note from '../../../components/article/Note.astro';
+import Figure from '../../../components/article/Figure.astro';
+import BarChart from '../../../components/article/BarChart.astro';
+import Stats from '../../../components/article/Stats.astro';
 import { Image } from 'astro:assets';
-import traditionalImg from '../../assets/blog/minds/traditional-vs-minds.png';
-import crawlerImg from '../../assets/blog/minds/glue-crawler.png';
-import quicksightImg from '../../assets/blog/minds/quicksight-dashboards.png';
-import workflowImg from '../../assets/blog/minds/cohort-workflow.png';
+import traditionalImg from '../../../assets/blog/research/minds/traditional-vs-minds.png';
+import crawlerImg from '../../../assets/blog/research/minds/glue-crawler.png';
+import quicksightImg from '../../../assets/blog/research/minds/quicksight-dashboards.png';
+import workflowImg from '../../../assets/blog/research/minds/cohort-workflow.png';
 
 A multimodal oncology model starts with a practical question: for these patients, where is everything? Clinical and genomic records for a lung cancer cohort may sit in the NCI Genomic Data Commons (GDC), the CT, MRI and PET scans from the same studies take a different path into an imaging archive, and proteomics lives in yet another portal. Each one has its own API, schema and query method. In the paper we put it plainly: piecing together data manually across these silos is painstakingly difficult.
 
-MINDS, the Multimodal Integration of Oncology Data System, is our answer to that problem. It pulls the structured clinical and biospecimen records from public cancer repositories into one patient-centric warehouse. Researchers define a cohort with SQL, and MINDS then fetches the matching slides, scans and omics files from the repositories that host them. The large files are never copied into MINDS itself. In the Sensors paper, MINDS consolidates 41,499 open-access cases into a 25.85 MB structured extract and answers typical single-table queries in under 5 seconds on average.[^paper]
+MINDS, the Multimodal Integration of Oncology Data System, is our answer to that problem. It pulls the structured clinical and biospecimen records from public cancer repositories into one patient-centric database. Researchers define a cohort with SQL, and MINDS then fetches the matching slides, scans and omics files from the repositories that host them.[^paper]
+
+<Note title="In short" variant="info">
+
+- **Problem:** cancer data for the same patients is split across repositories, each with its own API and schema.
+- **What we built:** MINDS keeps only the small clinical and biospecimen records in one SQL database, and downloads images, slides and omics files from their source repositories only when a cohort needs them.
+- **Result:** 41,499 open-access cases fit in a 25.85 MB extract. Typical single-table queries average under 5 seconds, and queries across 8 or more tables finish within 15 seconds.
+
+</Note>
 
 I developed MINDS. Asim Waqas and I share first authorship, and I am the paper's corresponding author. Kavya Venkatesan and Yasin Yilmaz are co-authors, and Ghulam Rasool supervised the work.
 
@@ -68,35 +76,29 @@ The paper lists five gaps in existing approaches:
 - dynamic dataset extracts make it hard to trace which data trained which model;
 - access controls are coarse-grained.
 
-## Design: metadata first
+## A metadata-first design
 
 We designed MINDS around five requirements. It should minimize large-scale unstructured storage, scale both horizontally and vertically, add new data sources easily, track data from ingestion to training, and place audit checkpoints at every stage of the pipeline.
 
-The first requirement shapes everything else. MINDS stores no whole slide images or radiology scans. It keeps only structured and semi-structured records, such as clinical and biospecimen metadata and identifiers, and uses them to decide what to download later. Unstructured data stays in its source repository until a user builds a cohort that needs it.
+The first requirement shapes everything else. MINDS stores no whole slide images or radiology scans. It keeps only structured and semi-structured records, such as clinical and biospecimen metadata and identifiers. That makes it a compact, harmonized index of patients rather than another copy of the data commons: small enough to query interactively, with case IDs that tell the download tools which files to fetch later. Unstructured data stays in its source repository until a user builds a cohort that needs it.
 
 Underneath, MINDS is a two-tier data lakehouse on Amazon Web Services: a data lake that takes raw records as they arrive, and a data warehouse that holds the refined relational tables used for analysis.
 
 <Sidenote>A warehouse is "schema-on-write": the schema is fixed before data is loaded, which makes queries fast. A lake is "schema-on-read": structure is applied only when data is queried, so it accepts heterogeneous raw data.</Sidenote>
 
-<Note title="Key takeaway" variant="info">
-
-MINDS does not try to be another copy of the commons. It is a compact, harmonized index of patients and their clinical and biospecimen records. The index is small enough to query interactively, and its case IDs tell the download tools which images, slides and omics files to fetch from the source repositories.
-
-</Note>
-
 ## How it works
 
 ### Acquisition and updates
 
-For the first version we used the GDC as the primary structured source. The paper describes it as holding clinical, biospecimen and molecular data for over 86,000 cases across 78 projects, with more than 3 petabytes of data from programs such as TCGA and TARGET as of 2023. We pull the TSV and JSON files for all public cases. On the clinical side these cover clinical, exposure, family history, follow-up and pathology detail records. On the biospecimen side they cover aliquot, analyte, portion, sample and slide records. The files are staged in an Amazon S3 ingest bucket, and AWS Lake Formation turns that bucket into a queryable data lake.
+For the first version we used the GDC as the primary structured source. The paper describes it as holding clinical, biospecimen and molecular data for over 86,000 cases across 78 projects, with more than 3 petabytes of data from programs such as TCGA and TARGET as of 2023. We pull the TSV and JSON files for all public cases. On the clinical side these cover clinical, exposure, family history, follow-up and pathology detail records. On the biospecimen side they cover aliquot, analyte, portion, sample and slide records. The files are staged in cloud storage (an Amazon S3 bucket) that forms the data lake.
 
-Acquisition repeats on a schedule. ETL routines run every 12 hours, using the GDC REST API to fetch cases, files and metadata added since the last timestamp. When new data lands in the bucket, AWS Lambda triggers the Glue crawlers, so only the difference between the bucket and the lake is processed. The paper names UCSC Xena and cBioPortal as further platforms the structured pipeline can integrate.
+Acquisition repeats on a schedule. Extract-transform-load (ETL) routines run every 12 hours, using the GDC REST API to fetch cases, files and metadata added since the last timestamp. New arrivals trigger an update job, so only the difference between the bucket and the lake is processed. The paper names UCSC Xena and cBioPortal as further platforms the structured pipeline can integrate.
 
 ### Harmonizing to one model
 
 Raw downloads come in different shapes: JSON clinical documents describe patients differently from TSV biospecimen exports. We use the GDC data model as the integration schema. It is a directed acyclic graph whose nodes are entities such as cases, samples, files and read groups, and whose edges are relationships such as a sample that is `derived_from` a case.
 
-The ETL runs on AWS Glue 4.0. Its crawlers read the GDC node schemas from their YAML definitions, parse the incoming JSON and map each property to a column in a Glue table. In this way the graph becomes a relational view. Child records keep the IDs of their parent case and file, so the links can be rebuilt with joins. For sources that do not fit the existing tables, Glue schema evolution can extend a definition or create a new table.
+The ETL runs on AWS Glue, Amazon's managed ETL service. Its crawlers read the GDC node schemas from their YAML definitions, parse the incoming JSON and map each property to a column in a Glue table. In this way the graph becomes a relational view. Child records keep the IDs of their parent case and file, so the links can be rebuilt with joins. For sources that do not fit the existing tables, Glue schema evolution can extend a definition or create a new table.
 
 <details>
 <summary>The five-step Glue crawler workflow</summary>
@@ -115,13 +117,13 @@ The ETL runs on AWS Glue 4.0. Its crawlers read the GDC node schemas from their 
 
 ### Warehouse and serving
 
-The cataloged tables are loaded into Amazon Redshift, the primary analytical warehouse. An RDS MySQL cluster handles inserts and updates as new data arrives, so ad hoc analysis does not slow the update path. Redshift Spectrum queries the raw files in S3 directly, and the Glue Data Catalog serves as the shared metadata store for Athena, QuickSight and SageMaker.
+The cataloged tables are loaded into Amazon Redshift, the analytical warehouse. A separate MySQL database handles inserts and updates as new data arrives, so ad hoc analysis does not slow the update path. One shared catalog describes the tables for every downstream tool, from SQL queries to dashboards.
 
 <Figure caption="QuickSight analytics generated from MINDS clinical data, as examples of the dashboard's cohort exploration. Each panel counts records by one field: (a) year of death, (b) cause of death, (c) gender, (d) ethnicity, (e) classification of tumor and (f) progression or recurrence. Reproduced from <a href='https://doi.org/10.3390/s24051634'>Tripathi et al. (2024)</a>, <em>Sensors</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>.">
 <Image src={quicksightImg} alt="Six QuickSight charts in a grid: a histogram of record counts by year of death from 1990 to 2022 peaking around 2008, a bar chart by cause of death led by cancer related, pie charts by gender and by ethnicity, and bar charts by tumor classification and by progression or recurrence, where not reported is the largest category." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 700px, 100vw" />
 </Figure>
 
-There are two ways to use the result. QuickSight dashboards let researchers explore distributions and filter on fields such as age, gender, ethnicity, tumor grade, treatment type, year of diagnosis and survival. For pipelines, an open-source Python toolkit runs the cohort workflow. A SQL query returns a pandas DataFrame of matching clinical records, or a list of unique case IDs that the toolkit uses to call the GDC, IDC and PDC APIs. Downloads go into a top-level `/raw` folder with one subfolder per case, together with JSON manifests that record file IDs, types and sources. Each cohort dataset gets a unique version ID, and any change creates a new version.
+There are two ways to use the result. Dashboards built with Amazon QuickSight let researchers explore distributions and filter on fields such as age, gender, ethnicity, tumor grade, treatment type, year of diagnosis and survival. For pipelines, an open-source Python toolkit runs the cohort workflow. A SQL query returns a pandas DataFrame of matching clinical records, or a list of unique case IDs that the toolkit uses to call the GDC, IDC and PDC APIs. Downloads go into a top-level `/raw` folder with one subfolder per case, together with JSON manifests that record file IDs, types and sources. Each cohort dataset gets a unique version ID, and any change creates a new version.
 
 <Sidenote>Versioning is tied to the cohort query. Researchers can therefore identify the exact dataset behind each model version, and the manifest records which query and sources produced it.</Sidenote>
 
@@ -131,9 +133,9 @@ There are two ways to use the result. QuickSight dashboards let researchers expl
 
 ### Security and portability
 
-Data in S3 is encrypted at rest with 256-bit AES keys managed through AWS KMS, and traffic is encrypted with TLS 1.2. IAM policies control access at the resource and action level, and VPC endpoints prevent public exposure of the data. Lake Formation adds column-level access control. CloudTrail and CloudWatch provide audit logs. Multi-AZ RDS, versioned S3 buckets and cross-region replication protect against data loss.
+Data is encrypted at rest with 256-bit AES keys and in transit with TLS 1.2. Access policies work at the level of individual resources and actions, and column-level controls can hide sensitive fields. Audit logs record activity, and replicated, versioned storage protects against data loss.
 
-The design aims to avoid depending on a single provider. The paper maps each AWS component to a Google Cloud equivalent: Cloud Data Fusion for Glue, BigQuery for Redshift, Cloud SQL for RDS, Cloud Functions and Cloud Run for Lambda, and Looker for QuickSight. It also describes an on-premise mode: a Docker setup that bootstraps a MySQL database with the consolidated schema, and a lightweight Flask app in place of the dashboards.
+The design aims to avoid depending on a single provider. The paper maps each AWS component to a Google Cloud equivalent, for example BigQuery in place of Redshift and Looker in place of QuickSight. It also describes an on-premise mode: a Docker setup that bootstraps a MySQL database with the consolidated schema, and a lightweight Flask app in place of the dashboards.
 
 ## What we measured
 
@@ -203,7 +205,7 @@ In a JNCCN 2024 abstract, Asim Waqas, Ghulam Rasool and I described the next pha
 
 MINDS is now distributed on PyPI as `med-minds`.[^pypi] The cloud version is in closed beta, and the database can also be recreated locally on PostgreSQL. The repository lists the projects being brought into MINDS, including imaging collections, for a total of 115,974 patients.[^code]
 
-MINDS also supplies data to our later work. In [HONeYBEE](/blog/honeybee/), we obtained the raw TCGA data through MINDS.[^honeybee]
+MINDS also supplies data to our later work. In [HONeYBEE](/blog/research/honeybee/), we obtained the raw TCGA data through MINDS.[^honeybee]
 
 ## Resources
 

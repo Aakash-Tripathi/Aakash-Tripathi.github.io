@@ -1,0 +1,43 @@
+---
+// Listing page for one blog category (/blog/research/, /blog/homelab/).
+import Layout from '../layouts/Layout.astro';
+import PageIntro from './PageIntro.astro';
+import BlogCard from './BlogCard.astro';
+import { getProjects, categories } from '../lib/projects.js';
+
+interface Props {
+  id: string;
+}
+
+const category = categories.find((c) => c.id === Astro.props.id)!;
+const posts = await getProjects(category.id);
+---
+
+<Layout title={`${category.label} | Blog | Aakash Tripathi`} description={category.intro}>
+  <PageIntro title={category.label}>
+    <p>{category.intro}</p>
+    <p><a href="/blog/">All blog posts</a></p>
+  </PageIntro>
+  <h2 class="sr-only">Posts</h2>
+  <section class="container posts">
+    {posts.map((p) => <BlogCard post={p} />)}
+  </section>
+</Layout>
+
+<style>
+  .posts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 88px 32px;
+    max-width: 1140px;
+    padding-top: 72px;
+    padding-bottom: 120px;
+  }
+
+  @media (max-width: 760px) {
+    .posts {
+      grid-template-columns: 1fr;
+      gap: 64px;
+    }
+  }
+</style>

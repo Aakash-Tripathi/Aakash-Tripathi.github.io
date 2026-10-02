@@ -1,36 +1,130 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import BlogCard from '../../components/BlogCard.astro';
-import { getProjects } from '../../lib/projects.js';
+import PostRow from '../../components/PostRow.astro';
+import { getProjects, categories } from '../../lib/projects.js';
 
 const posts = await getProjects();
+const [lead, ...moreFeatured] = posts.filter((p) => p.featured);
+const columns = categories.map((c) => ({ ...c, posts: posts.filter((p) => p.category === c.id).slice(0, 3) }));
 ---
 
 <Layout
   title="Blog | Aakash Tripathi"
-  description="Long-form posts on Aakash Tripathi's research: HONeYBEE patient embeddings, LLM extraction from pathology reports, multimodal survival modeling, MINDS, SeNMo, and HetMoE."
+  description="Aakash Tripathi's blog: write-ups of his research on multimodal AI for oncology, and notes from his Unraid homelab."
 >
   <h1 class="sr-only">Blog</h1>
-  <h2 class="sr-only">All posts</h2>
-  <section class="container posts">
-    {posts.map((p) => <BlogCard post={p} />)}
+
+  {
+    lead && (
+      <section class="container featured-section" aria-labelledby="featured-title">
+        <h2 class="col-title" id="featured-title">Featured</h2>
+        <div class="featured">
+        <div>
+          <BlogCard post={lead} lead />
+        </div>
+        {moreFeatured.length > 0 && (
+          <div>
+            <div class="stack">
+              {moreFeatured.map((p) => (
+                <PostRow post={p} stacked />
+              ))}
+            </div>
+          </div>
+        )}
+        </div>
+      </section>
+    )
+  }
+
+  <hr class="rule" />
+
+  <section class="container columns">
+    {
+      columns.map((c) => (
+        <div>
+          <h2 class="col-title">
+            <a href={`/blog/${c.id}/`}>{c.label}</a>
+          </h2>
+          <p class="col-intro">{c.intro}</p>
+          <div class="stack">
+            {c.posts.map((p) => (
+              <PostRow post={p} showCategory={false} />
+            ))}
+          </div>
+          <a class="button button--ghost button--small more" href={`/blog/${c.id}/`}>
+            More {c.label}
+          </a>
+        </div>
+      ))
+    }
   </section>
 </Layout>
 
 <style>
-  .posts {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 88px 32px;
-    max-width: 1140px;
-    padding-top: 56px;
-    padding-bottom: 120px;
+  .featured-section {
+    padding-top: 72px;
+    padding-bottom: 80px;
   }
 
-  @media (max-width: 760px) {
-    .posts {
+  .featured-section .stack {
+    gap: 28px;
+  }
+
+  .featured {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    gap: 48px;
+  }
+
+  .featured :global(.post-card) {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .col-title {
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 20px;
+  }
+
+  .col-title a {
+    text-decoration: none;
+  }
+
+  .col-title a:hover {
+    text-decoration: underline;
+  }
+
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 48px;
+    padding-top: 72px;
+    padding-bottom: 104px;
+  }
+
+  .col-intro {
+    margin: -12px 0 24px;
+    font-size: 0.84rem;
+    color: var(--muted-color);
+  }
+
+  .more {
+    margin-top: 28px;
+  }
+
+  @media (max-width: 860px) {
+    .featured,
+    .columns {
       grid-template-columns: 1fr;
-      gap: 64px;
     }
   }
 </style>

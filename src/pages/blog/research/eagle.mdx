@@ -1,5 +1,5 @@
 ---
-layout: ../../layouts/ArticleLayout.astro
+layout: ../../../layouts/ArticleLayout.astro
 title: "EAGLE: attention fusion and attribution for cancer survival"
 short: "EAGLE"
 subtitle: "Fusing imaging, report and clinical embeddings with cross-modal attention, then asking which modality drove each patient's risk score."
@@ -33,20 +33,29 @@ coverCaption: |-
   EAGLE architecture. Imaging (RadImageNet), clinical and text-report (GatorTron) embeddings each pass through a dedicated encoder of linear, batch-normalization, ReLU and dropout layers, down to 128 dimensions (imaging, text) or 32 (clinical). Cross-modal attention and a feature fusion network then produce a primary Cox risk score and an auxiliary event prediction, and three attribution methods explain each modality's contribution. Input sizes vary by cohort; see the cohort table below. Reproduced from <a href='https://arxiv.org/abs/2506.22446'>Tripathi et al. (2025)</a>, <em>arXiv</em>, <a href='https://creativecommons.org/licenses/by-nc-nd/4.0/'>CC BY-NC-ND 4.0</a>.
 ---
 
-import Sidenote from '../../components/article/Sidenote.astro';
-import Note from '../../components/article/Note.astro';
-import Figure from '../../components/article/Figure.astro';
-import BarChart from '../../components/article/BarChart.astro';
-import Stats from '../../components/article/Stats.astro';
+import Sidenote from '../../../components/article/Sidenote.astro';
+import Note from '../../../components/article/Note.astro';
+import Figure from '../../../components/article/Figure.astro';
+import BarChart from '../../../components/article/BarChart.astro';
+import Stats from '../../../components/article/Stats.astro';
 import { Image } from 'astro:assets';
-import attributionMethodsImg from '../../assets/blog/eagle/attribution-methods-nsclc.png';
-import patientAttributionImg from '../../assets/blog/eagle/patient-attribution-gbm.png';
+import attributionMethodsImg from '../../../assets/blog/research/eagle/attribution-methods-nsclc.png';
+import patientAttributionImg from '../../../assets/blog/research/eagle/patient-attribution-gbm.png';
 
 The information that predicts how long a cancer patient will live is spread across several kinds of data: imaging studies, free-text radiology and pathology reports, and structured fields such as age, stage, smoking history and laboratory values. Clinicians read these together. Many survival models do not. They either use one source or concatenate features from several, which treats every source as equally important for every patient.
 
 EAGLE (Efficient Alignment of Generalized Latent Embeddings) is our framework for survival prediction from imaging, text and clinical data together. It takes embeddings that have already been computed for each modality, compresses each one with a small encoder, applies cross-modal attention between modalities, and outputs a Cox risk score. For every patient it also reports how much each modality contributed to that score.[^eagle]
 
 We evaluated EAGLE on 911 patients across glioblastoma (GBM), intraductal papillary mucinous neoplasm (IPMN) and non-small cell lung cancer (NSCLC). From a 64-dimensional fused representation, it reached C-indices of 0.637, 0.679 and 0.598, and its risk tertiles separated patients with clearly different survival in every cohort. I am first author; Asim Waqas, Matthew B. Schabath, Yasin Yilmaz and Ghulam Rasool are co-authors.
+
+<Note title="In short" variant="info">
+
+- **Problem:** survival signals are split across imaging, reports and clinical records, and simple fusion weights them all the same for every patient.
+- **What we built:** EAGLE, which fuses precomputed embeddings with cross-modal attention into a 64-dimensional patient representation and a Cox risk score.
+- **Result:** C-indices of 0.637 (GBM), 0.679 (IPMN) and 0.598 (NSCLC) across 911 patients, with risk tertiles that separate survival in each cohort.
+- **Explanation:** three attribution methods give each modality's share of every score. They can disagree, so they are best read together.
+
+</Note>
 
 ## Why fusion is hard
 
@@ -56,11 +65,9 @@ Real cohorts add two more problems: missing data, and outcomes that differ sharp
 
 <Sidenote>The concordance index (C-index) is the probability that, for a comparable pair of patients in which patient *i* had the event first, the model gives *i* the higher risk score. A value of 0.5 means the ranking is random, and 1.0 means it is perfect.</Sidenote>
 
-## The approach
+## How it works
 
 EAGLE runs in a fixed sequence of stages. Embeddings are extracted once, before training, so only the encoders, attention and fusion layers, and prediction heads are trained.
-
-## How it works
 
 ### Modality encoders
 
@@ -191,13 +198,7 @@ The answer depends on the attribution method as much as on the disease. Under si
 <Image src={attributionMethodsImg} alt="Multi-panel figure titled Comprehensive Attribution Analysis, NSCLC. Three pie charts give average modality contributions: simple attribution imaging 31.9%, text 33.7%, clinical 34.4%; gradient-based imaging 49.0%, text 31.6%, clinical 19.4%; integrated gradients text 92.0%, clinical 8.0%, imaging 0.0%. Below are bar charts comparing imaging, text and clinical contributions across the three methods, a heatmap of correlations between the nine method and modality attributions, and a bar chart of each attribution's correlation with the risk score, all between -0.12 and 0.14." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
 </Figure>
 
-<Note title="Key takeaway" variant="info">
-
-A 64-dimensional representation built from attention-fused embeddings kept useful ranking ability in three very different cancers (C-index 0.598-0.679). It also produced risk tertiles with clearly separated survival curves. The per-patient attributions break each score down by modality, but the three methods can disagree, so they are best read together.
-
-</Note>
-
-## What we learned
+## Reading the attributions
 
 The paper reads the attribution patterns against clinical understanding of each disease. In GBM, it suggests the weight on text reflects surgical and pathological details that are often written only in narrative reports: extent of resection, MGMT methylation and IDH mutation status. In IPMN, the even split fits guidelines that call for combined review of imaging features, cyst fluid analysis and clinical presentation. In NSCLC, it ties the 49.0% gradient-based imaging share to the central role of CT in TNM staging.
 
@@ -205,7 +206,7 @@ The paper reads the attribution patterns against clinical understanding of each 
 <Image src={patientAttributionImg} alt="Four panels. Top left: grouped bars of imaging, text and clinical contribution for the 10 highest-risk GBM patients, with text the largest share for every patient at roughly 40-59%. Top right: the same for the 10 lowest-risk patients, where imaging or text leads depending on the patient. Bottom left: scatter of contribution against risk score with trend lines, text rising and imaging falling as risk increases while clinical stays near 19%. Bottom right: heatmap of the three modality contributions for 20 patients sorted by risk." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
 </Figure>
 
-### Limitations
+## Limitations
 
 Most of these limitations are stated in the preprint itself.
 
@@ -214,14 +215,13 @@ Most of these limitations are stated in the preprint itself.
 - **Single-institution cohorts.** External validation is needed before claiming the results generalize.
 - **One architecture for every cancer.** The cohorts' survival and event-rate profiles differ widely, and the paper suggests cancer-specific adaptations may work better than one shared design.
 - **Noisy attribution signals.** Gradients with respect to pre-extracted embeddings can be very small. The paper computes all three methods for this reason, and as shown above, they can disagree.
+- **Wide spread on GBM.** The GBM C-index has the largest reported spread (± 0.087), so it is the least certain of the three.
 
-The reported spread is also widest for GBM (± 0.087), so that cohort's C-index is the least certain of the three.
-
-## Where it goes next
+## Next steps and related work
 
 The paper lists the next steps: longitudinal data that capture treatment-response dynamics, more modalities (genomic profiles, liquid biopsies and digital pathology), uncertainty estimates for individual predictions, and prospective validation.
 
-A related AACR 2025 abstract from our group used MINDS and HONeYBEE to curate data from over 10,000 cancer patients, combined modality embeddings with late fusion, and reported a 12% improvement in concordance indices over unimodal approaches.[^aacr25] EAGLE instead learns cross-modal attention before fusion. An AACR 2026 abstract presents the same three cohorts (911 patients) and C-indices as a real-world evaluation, with [HONeYBEE](/blog/honeybee/) generating the embeddings from incomplete, heterogeneous routine-care data (8.2-47% missing). It adds risk-group medians for the 171-patient pancreatic cohort: 100 months (low risk) against 35 months (high risk).[^aacr26]
+A related AACR 2025 abstract from our group used MINDS and HONeYBEE to curate data from over 10,000 cancer patients, combined modality embeddings with late fusion, and reported a 12% improvement in concordance indices over unimodal approaches.[^aacr25] EAGLE instead learns cross-modal attention before fusion. An AACR 2026 abstract presents the same three cohorts (911 patients) and C-indices as a real-world evaluation, with [HONeYBEE](/blog/research/honeybee/) generating the embeddings from incomplete, heterogeneous routine-care data (8.2-47% missing). It adds risk-group medians for the 171-patient pancreatic cohort: 100 months (low risk) against 35 months (high risk).[^aacr26]
 
 ## Resources
 

@@ -1,5 +1,5 @@
 ---
-layout: ../../layouts/ArticleLayout.astro
+layout: ../../../layouts/ArticleLayout.astro
 title: "Consensus reasoning with local LLMs for pathology report extraction"
 short: "CLEVER & pathology reports"
 subtitle: "Eleven local LLMs extract, three reasoning models grade, one adjudicates: structured, auditable data from free-text surgical pathology reports."
@@ -14,6 +14,7 @@ affiliations: ["H. Lee Moffitt Cancer Center & Research Institute, Tampa, FL", "
 links: [{label: "Preprint", url: "https://doi.org/10.1101/2025.04.22.25326217"}, {label: "TCGA-Reports data", url: "https://github.com/tatonetti-lab/tcga-path-reports"}, {label: "The Pathologist", url: "https://www.thepathologist.com/issues/2026/articles/april/ai-tackles-pathology-report-complexity/"}]
 tags: ["large language models", "pathology reports", "information extraction", "cancer registry", "local deployment"]
 order: 2
+featured: true
 citation: "Tripathi A, Waqas A, Venkatesan K, Ullah E, Khan A, Khalil F, et al. Using Consensus-Based Reasoning and Large Language Models to Extract Structured Data From Surgical Pathology Reports. Lab Invest. 2026;106(2):104272. doi:10.1016/j.labinv.2025.104272"
 bibtex: |
   @article{tripathi2026consensus,
@@ -31,22 +32,31 @@ coverCaption: |-
   The three-stage framework. In stage 1, eleven locally hosted LLMs extract the six variables from each report and justify them; in stage 2, DeepSeek-R1-large, Qwen and QwQ score every prediction 1 or 0 against the report and its justification; in stage 3, DeepSeek-R1-large aggregates the predictions and scores into consensus values with concise rationales, and pathologists review a random sample. Reproduced from <a href='https://doi.org/10.1016/j.labinv.2025.104272'>Tripathi et al. (2026)</a>, <em>Laboratory Investigation</em>, © 2025 USCAP, published by Elsevier; reused under <a href='https://www.elsevier.com/about/policies-and-standards/copyright'>Elsevier author rights</a>.
 ---
 
-import Sidenote from '../../components/article/Sidenote.astro';
-import Note from '../../components/article/Note.astro';
-import Figure from '../../components/article/Figure.astro';
-import BarChart from '../../components/article/BarChart.astro';
-import Stats from '../../components/article/Stats.astro';
+import Sidenote from '../../../components/article/Sidenote.astro';
+import Note from '../../../components/article/Note.astro';
+import Figure from '../../../components/article/Figure.astro';
+import BarChart from '../../../components/article/BarChart.astro';
+import Stats from '../../../components/article/Stats.astro';
 import { Image } from 'astro:assets';
-import reportExampleImg from '../../assets/blog/clever/report-example.png';
-import automatedTcgaImg from '../../assets/blog/clever/automated-evaluation-tcga.png';
-import expertEvalImg from '../../assets/blog/clever/expert-evaluation.png';
-import biomarkersImg from '../../assets/blog/clever/biomarkers-moffitt.png';
+import reportExampleImg from '../../../assets/blog/research/clever/report-example.png';
+import automatedTcgaImg from '../../../assets/blog/research/clever/automated-evaluation-tcga.png';
+import expertEvalImg from '../../../assets/blog/research/clever/expert-evaluation.png';
+import biomarkersImg from '../../../assets/blog/research/clever/biomarkers-moffitt.png';
 
-A surgical pathology report is where a cancer diagnosis is written down: tumor site, laterality, histology, stage, grade and behavior, plus the biomarkers that steer treatment. Cancer registries, trial screening and research cohorts need those values as structured fields; pathologists write them as narrative, in formats that vary by institution, subspecialty and individual habit, with values such as stage often embedded in the prose or spread across sections.
+A surgical pathology report is where a cancer diagnosis is written down: tumor site, laterality (which side of the body), histology (tumor type), stage, grade and behavior, plus the biomarkers that steer treatment. Cancer registries, trial screening and research cohorts need those values as structured fields. Pathologists write them as narrative, in formats that vary by institution, subspecialty and individual habit, often with a value like stage buried in the prose.
 
-We built and evaluated a consensus-based alternative to asking a single large language model (LLM) for the answer. Eleven open models, all running on local hardware, independently extract six registry variables (and, for one cohort, organ-specific biomarkers) and justify each value. Three reasoning models grade every extraction against the source report, and a final reasoning model adjudicates to one value per field with a written rationale. Board-certified (or equivalent) pathologists then scored samples of the final output.
+We tested a consensus-based alternative to asking a single large language model (LLM) for the answer. Eleven open models, all running on local hardware, independently extract the six registry variables and justify each value. Three reasoning models grade every extraction against the source report, and a final reasoning model settles on one value per field with a written rationale. Pathologists then scored samples of the final output.
 
-Across 6,100 reports from The Cancer Genome Atlas (TCGA) and 510 from Moffitt Cancer Center, mean automated accuracy on the six variables was 84.9% ± 7.3% and 88.2% ± 7.2%, pathologists scored the consensus output at 88% to 100% across the reported variables, and biomarkers were harder at 70.6% ± 7.9%.[^paper] I am first author and developed the LLM workflows; Asim Waqas and I designed and implemented the framework and ran the analyses together. Ghulam Rasool supervised as principal investigator. The work continued in CLEVER, the LLM-agent system I went on to develop at Moffitt.
+<Note title="In short" variant="info">
+
+- **Problem:** registry fields and biomarkers sit in free-text pathology reports, and a single LLM can confidently get them wrong.
+- **Approach:** eleven local LLMs extract, three reasoning LLMs grade, one adjudicates, and every value comes with a rationale. No data leaves the institution.
+- **Results:** mean automated accuracy of 84.9% on 6,100 TCGA reports and 88.2% on 510 Moffitt reports; pathologists scored the consensus output at 88% to 100% across variables.[^paper]
+- **Limits:** biomarkers were harder (70.6% automated accuracy), and expert review covered samples, not every report.
+
+</Note>
+
+I am first author and developed the LLM workflows; Asim Waqas and I designed and implemented the framework and ran the analyses together, and Ghulam Rasool supervised as principal investigator. The work continued in CLEVER, the LLM-agent system I went on to develop at Moffitt.
 
 ## Why reports resist structure
 
@@ -95,7 +105,7 @@ All models ran at FP16. Stages: 1 extraction, 2 evaluation, 3 aggregation.[^pape
 
 ### Stage 2: three graders
 
-Every extracted value, together with the justification that produced it, goes to three reasoning models acting as evaluators: DeepSeek-R1-large (70B), Qwen3-32B and QwQ-32B. Each sees the original report and assigns a strict binary score, 1 for correct and 0 for incorrect, based on textual evidence, internal consistency and clinical plausibility. A correct value with an invalid justification does not earn a 1, and "Unknown" is correct only when the report truly lacks the information.[^preprint] Using three evaluators adds diverse perspectives and makes the grading more robust.
+Every extracted value, together with the justification that produced it, goes to three reasoning models acting as evaluators: DeepSeek-R1-large (70B), Qwen3-32B and QwQ-32B. Each sees the original report and assigns a strict binary score, 1 for correct and 0 for incorrect, based on textual evidence, internal consistency and clinical plausibility. A correct value with an invalid justification does not earn a 1, and "Unknown" is correct only when the report truly lacks the information.[^preprint]
 
 ### Stage 3: one adjudicator
 
@@ -172,7 +182,7 @@ On TCGA, histology (88%), site (87%), stage (84%) and behavior (84%) were the be
 <Image src={automatedTcgaImg} alt="Multi-panel results figure. Panel A: grouped horizontal bars of accuracy for eleven extractor models scored by three evaluators, with phi4, deepseek-r1-70b, deepseek-r1-32b and llama3.3 at the top and llama3.2-3b at the bottom. Panel B: violin plots of evaluator scores, means 0.88 for DeepSeek-R1 70B, 0.85 for Qwen 32B and 0.82 for QwQ 32B, with pairwise correlations of 0.94 to 0.96. Panels C to E, one column per evaluator: bar charts of accuracy by organ and by variable, and heatmaps of accuracy for ten organs by six variables." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
 </Figure>
 
-Model, variable and organ all mattered (F = 1716.82, 3236.68 and 1946.43, all P &lt; .001), as did their three-way interaction (F = 24.74, P &lt; .001). In plain terms, no single model performed uniformly across variables, and organ-specific language patterns affected accuracy.
+Model, variable and organ each had a significant effect on accuracy, and so did their three-way interaction (all P &lt; .001).[^paper] In plain terms, no single model performed uniformly across variables, and organ-specific language affected accuracy.
 
 <Sidenote>Phi-4 has 14B parameters yet ranked with the 70B models. The paper attributes the clustering to training recipe, such as reasoning and instruction-following post-training, rather than parameter count.</Sidenote>
 
@@ -245,17 +255,11 @@ Biomarkers were the hardest task. As Marilyn Bui explained to The Pathologist, r
 <Image src={biomarkersImg} alt="Three-column figure for brain and nervous system, breast, and lung biomarkers. Top row: horizontal accuracy bars, brain from TP53 0.84 to IDH2 0.67, breast from Ki-67 0.68 to ER 0.58, lung from ROS1 0.82 to EGFR 0.65. Middle row: mean score per evaluator, with DeepSeek-R1-70B lowest in every organ (0.58, 0.53, 0.62) and Qwen-32B and QwQ-32B higher. Bottom row: heatmaps of each biomarker by evaluator." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
 </Figure>
 
-The breast panel scored lowest, with ER and PR below 60%. The paper links this to complex reporting formats and multiple specimen types in breast reports.
-
-<Note title="Key takeaway" variant="info">
-
-Combining independent extraction, multi-evaluator grading and reasoned adjudication, locally deployed open models reached pathologist-scored accuracy of 88% to 100% on the reported standard variables in both cohorts, with a rationale for every value. Biomarkers were harder (70.6% automated accuracy).
-
-</Note>
+The breast panel scored lowest, with estrogen receptor (ER) and progesterone receptor (PR) status below 60%. The paper links this to complex reporting formats and multiple specimen types in breast reports.
 
 ## What we learned
 
-**Many "errors" live in the source.** Pathologists often traced a wrong answer to ambiguous documentation rather than model failure. Laterality was marked wrong where it does not apply (cervix, bladder) or where bilateral disease was described without naming the specimen's side. Stage errors followed mixed staging schemes or incomplete TNM statements. Often the reviewers judged the model's inference clinically plausible.
+**Many "errors" live in the source.** Pathologists often traced a wrong answer to ambiguous documentation rather than model failure. Laterality was marked wrong where it does not apply (cervix, bladder) or where bilateral disease was described without naming the specimen's side. Stage errors followed mixed staging schemes or incomplete TNM (tumor, node, metastasis) statements. Often the reviewers judged the model's inference clinically plausible.
 
 **Organ-specific failure modes.** In Moffitt breast reports, sentinel node notation such as (sn) or (i-) was dropped from predicted stage. Brain cases tripped on site and laterality when the specimen label differed from the surgical target. In lung and metastatic cases, models sometimes confused the biopsy site (a lymph node or the liver) with the primary site.
 

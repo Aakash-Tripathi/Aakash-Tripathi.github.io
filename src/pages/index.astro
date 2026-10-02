@@ -23,18 +23,18 @@ const talkSlides = [...talks, ...teaching]
   }))
   .concat(gallery.filter((g) => asset(g.image)).map((g) => ({ ...g, image: asset(g.image), fit: 'contain' as const })));
 const postSlides = posts
-  .filter((p) => cover(p.slug))
+  .filter((p) => cover(p.key))
   .map((p) => ({
-    image: cover(p.slug),
+    image: cover(p.key),
     alt: p.coverAlt ?? `Figure from ${p.paperTitle ?? p.title}`,
     caption: `${p.title.startsWith(p.short) ? p.title : `${p.short}: ${p.title}`}${coverCredit(p) ? `. ${coverCredit(p)}` : ''}`,
     href: p.url,
+    bg: p.coverBg,
     fit: 'contain' as const,
   }));
 const slides = talkSlides.flatMap((s, i) => [s, ...postSlides.slice(i * 2, i * 2 + 2)]).concat(postSlides.slice(talkSlides.length * 2));
 
 const personSchema = {
-  '@context': 'https://schema.org',
   '@type': 'Person',
   '@id': 'https://aakash-tripathi.github.io/#person',
   name: profile.name,
@@ -61,13 +61,21 @@ const personSchema = {
   ],
   sameAs: [links.scholar, links.orcid, links.github, links.huggingface, links.linkedin, links.researchgate],
 };
+// ProfilePage tells Google this page is about the person; WebSite sets the site name shown in results.
+const schema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'ProfilePage', url: 'https://aakash-tripathi.github.io/', mainEntity: personSchema },
+    { '@type': 'WebSite', name: profile.name, alternateName: `${profile.name}, PhD`, url: 'https://aakash-tripathi.github.io/' },
+  ],
+};
 ---
 
 <Layout title="Aakash Tripathi, PhD | AI for Precision Oncology">
-  <StructuredData data={personSchema} />
+  <StructuredData data={schema} />
 
   <section class="container hero">
-    <h1>Hello! I am Aakash, an AI research scientist working in precision oncology.</h1>
+    <h1>Hello! I am Aakash Tripathi, an AI research scientist working in precision oncology.</h1>
     <img class="hero__photo" src={profile.photo} alt={`Portrait of ${profile.name}`} width="800" height="800" />
   </section>
 
@@ -100,7 +108,7 @@ const personSchema = {
     <div>
       <h2>From the blog</h2>
       <div class="home-posts">
-        {posts.slice(0, 2).map((p) => <BlogCard post={p} excerpt={false} />)}
+        {posts.filter((p) => p.featured).slice(0, 2).map((p) => <BlogCard post={p} excerpt={false} />)}
       </div>
       <p class="more"><a class="button button--ghost" href="/blog/">All posts</a></p>
     </div>

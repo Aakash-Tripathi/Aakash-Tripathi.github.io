@@ -6,7 +6,7 @@ import { talks, teaching } from '../data/cv.js';
 import { asset, cover } from '../lib/images.js';
 import { isMe, getProjects, coverCredit } from '../lib/projects.js';
 
-const posts = Object.fromEntries((await getProjects()).map((p) => [p.slug, p]));
+const posts = Object.fromEntries((await getProjects("research")).map((p) => [p.slug, p]));
 
 // "October 30, 2025" -> { month: 'OCT', year: '2025' }; "2026" -> { year: '2026' }
 const badge = (date = '') => ({
