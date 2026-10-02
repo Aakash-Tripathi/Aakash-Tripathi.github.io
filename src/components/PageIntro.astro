@@ -1,0 +1,48 @@
+---
+// Split page header: big heading on the left, short intro on the right, then a full-width rule.
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<section class="container intro">
+  <h1>{title}</h1>
+  <div class="intro__text"><slot /></div>
+</section>
+<hr class="rule" />
+
+<style>
+  .intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 32px 72px;
+    align-items: center;
+    padding-top: 88px;
+    padding-bottom: 88px;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 3.6vw, 2.8rem);
+    margin: 0;
+  }
+
+  .intro__text {
+    font-size: 0.86rem;
+    line-height: 1.9;
+    color: var(--text-color);
+  }
+
+  .intro__text :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 760px) {
+    .intro {
+      grid-template-columns: 1fr;
+      padding-top: 56px;
+      padding-bottom: 56px;
+    }
+  }
+</style>

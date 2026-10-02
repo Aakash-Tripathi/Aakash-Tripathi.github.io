@@ -1,0 +1,248 @@
+---
+// Horizontal bar or dot chart rendered at build time as plain HTML.
+// Use mark="dot" when the axis does not start at zero (e.g. C-index from 0.5).
+interface Row {
+  label: string;
+  value: number;
+  series?: string;
+  note?: string;
+}
+
+interface Props {
+  rows: Row[];
+  series?: string[];
+  min?: number;
+  max?: number;
+  decimals?: number;
+  unit?: string;
+  mark?: 'bar' | 'dot';
+  baseline?: { value: number; label: string };
+  axisLabel?: string;
+}
+
+const {
+  rows,
+  series = [],
+  min = 0,
+  decimals = 2,
+  unit = '',
+  mark = 'bar',
+  baseline,
+  axisLabel,
+} = Astro.props;
+const max = Astro.props.max ?? Math.max(...rows.map((r) => r.value));
+const pct = (v: number) => Math.min(100, Math.max(0, ((v - min) / (max - min)) * 100));
+const fmt = (v: number) => `${v.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${unit}`;
+const tick = (v: number) => `${v.toLocaleString('en-US', { maximumFractionDigits: decimals })}${unit}`;
+const slot = (r: Row) => (r.series ? series.indexOf(r.series) + 1 || 1 : 1);
+---
+
+<div class={`chart chart--${mark}`}>
+  {
+    series.length > 1 && (
+      <ul class="chart__legend">
+        {series.map((s, i) => (
+          <li>
+            <span class="chart__key" style={`background: var(--series-${i + 1})`} />
+            {s}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  <div class="chart__rows">
+    {
+      rows.map((r) => (
+        <div class="chart__row" title={`${r.label}${r.series ? ` (${r.series})` : ''}: ${fmt(r.value)}`}>
+          <span class="chart__label">
+            {r.label}
+            {series.length > 1 && r.series && <span class="sr-only">, {r.series}</span>}
+            {r.note && <span class="chart__note">{r.note}</span>}
+          </span>
+          <span class="chart__track">
+            {mark === 'bar' ? (
+              <span class="chart__bar" style={`width: ${pct(r.value)}%; background: var(--series-${slot(r)})`} />
+            ) : (
+              <span class="chart__dot" style={`left: ${pct(r.value)}%; background: var(--series-${slot(r)})`} />
+            )}
+            <span class="chart__value" style={`left: ${pct(r.value)}%`}>
+              {fmt(r.value)}
+            </span>
+            {baseline && <span class="chart__baseline" style={`left: ${pct(baseline.value)}%`} />}
+          </span>
+        </div>
+      ))
+    }
+  </div>
+  <div class="chart__axis">
+    <span />
+    <span class="chart__ticks">
+      <span style="left: 0%">{tick(min)}</span>
+      {baseline && <span style={`left: ${pct(baseline.value)}%`}>{baseline.label}</span>}
+      <span style="left: 100%">{tick(max)}</span>
+    </span>
+  </div>
+  {axisLabel && <p class="chart__axis-label">{axisLabel}</p>}
+</div>
+
+<style>
+  .chart {
+    font-size: 0.86rem;
+    line-height: 1.3;
+  }
+
+  .chart__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+    color: var(--muted-color);
+  }
+
+  .chart__legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .chart__key {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+
+  .chart__row,
+  .chart__axis {
+    display: grid;
+    grid-template-columns: minmax(90px, 32%) 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .chart__row {
+    min-height: 26px;
+    margin-bottom: 2px;
+  }
+
+  .chart__label {
+    color: var(--text-color);
+    text-align: right;
+  }
+
+  .chart__note {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--faint-color);
+  }
+
+  .chart__track {
+    position: relative;
+    height: 18px;
+    margin-right: 56px;
+    border-left: 1px solid var(--grid-color);
+  }
+
+  .chart--dot .chart__track::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1px solid var(--grid-color);
+  }
+
+  .chart__bar {
+    position: absolute;
+    left: 0;
+    top: 1px;
+    height: 16px;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .chart__dot {
+    position: absolute;
+    top: 50%;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 2px var(--page-bg);
+  }
+
+  .chart__value {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    padding-left: 8px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted-color);
+  }
+
+  .chart--dot .chart__value {
+    padding-left: 10px;
+  }
+
+  .chart__baseline {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    border-left: 1px solid var(--faint-color);
+  }
+
+  .chart__ticks {
+    position: relative;
+    height: 18px;
+    margin-right: 56px;
+    color: var(--faint-color);
+    font-size: 0.76rem;
+  }
+
+  .chart__ticks span {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .chart__ticks span:first-child {
+    transform: none;
+  }
+
+  .chart__ticks span:last-child {
+    transform: translateX(-100%);
+  }
+
+  .chart__axis-label {
+    margin: 6px 0 0;
+    text-align: center;
+    color: var(--faint-color);
+    font-size: 0.78rem;
+  }
+
+  @media (forced-colors: active) {
+    .chart__bar,
+    .chart__dot,
+    .chart__key {
+      forced-color-adjust: none;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .chart__row,
+    .chart__axis {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+
+    .chart__label {
+      text-align: left;
+    }
+
+    .chart__axis > span:first-child {
+      display: none;
+    }
+  }
+</style>

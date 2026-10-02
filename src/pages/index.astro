@@ -1,266 +1,224 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Header from '../components/Header.astro';
-import SectionContainer from '../components/SectionContainer.astro';
-import Education from '../components/Education.astro';
-import Experience from '../components/Experience.astro';
-import Awards from '../components/Awards.astro';
-import Publications from '../components/Publications.astro';
 import StructuredData from '../components/StructuredData.astro';
+import Carousel from '../components/Carousel.astro';
+import BlogCard from '../components/BlogCard.astro';
+import { profile, links, news, education, awards, talks, teaching, gallery } from '../data/cv.js';
+import { getProjects, formatDate, coverCredit } from '../lib/projects.js';
+import { asset, cover } from '../lib/images.js';
+import { fetchCitationCount } from '../utils/googleScholar.js';
 
-// Person Schema.org structured data for Google Knowledge Panel
+const posts = await getProjects();
+const citations = await fetchCitationCount();
+
+// Carousel: talk and poster images first, then the lead figure of each blog post.
+const talkSlides = [...talks, ...teaching]
+  .filter((t) => asset(t.image))
+  .map((t) => ({
+    image: asset(t.image),
+    alt: t.alt ?? `${t.title}, ${t.venue}`,
+    caption: `${t.title} · ${t.venue}${t.date ? `, ${t.date}` : ''}${t.credit ? ` (${t.credit})` : ''}`,
+    href: t.url,
+    fit: t.image.endsWith('.jpg') ? ('cover' as const) : ('contain' as const),
+  }))
+  .concat(gallery.filter((g) => asset(g.image)).map((g) => ({ ...g, image: asset(g.image), fit: 'contain' as const })));
+const postSlides = posts
+  .filter((p) => cover(p.slug))
+  .map((p) => ({
+    image: cover(p.slug),
+    alt: p.coverAlt ?? `Figure from ${p.paperTitle ?? p.title}`,
+    caption: `${p.title.startsWith(p.short) ? p.title : `${p.short}: ${p.title}`}${coverCredit(p) ? `. ${coverCredit(p)}` : ''}`,
+    href: p.url,
+    fit: 'contain' as const,
+  }));
+const slides = talkSlides.flatMap((s, i) => [s, ...postSlides.slice(i * 2, i * 2 + 2)]).concat(postSlides.slice(talkSlides.length * 2));
+
 const personSchema = {
-  "@context": "https://schema.org",
-  "@type": "Person",
-  "@id": "https://Aakash-Tripathi.github.io/#person",
-  "name": "Aakash Tripathi",
-  "givenName": "Aakash",
-  "familyName": "Tripathi",
-  "honorificSuffix": "Ph.D.",
-  "jobTitle": "Machine Learning Engineer",
-  "description": "Machine Learning Engineer specializing in multimodal medical AI research and deep learning frameworks for oncology data integration",
-  "url": "https://Aakash-Tripathi.github.io",
-  "image": "https://Aakash-Tripathi.github.io/assets/profile-photo.jpg",
-  "email": "Aakash.Tripathi@moffitt.org",
-  "telephone": "+1-404-234-8483",
-  "address": {
-    "@type": "PostalAddress",
-    "addressLocality": "Tampa",
-    "addressRegion": "FL",
-    "addressCountry": "US"
-  },
-  "affiliation": {
-    "@type": "Organization",
-    "@id": "https://www.moffitt.org/#organization",
-    "name": "H. Lee Moffitt Cancer Center and Research Institute",
-    "url": "https://www.moffitt.org",
-    "department": {
-      "@type": "Organization",
-      "name": "Department of Machine Learning"
-    }
-  },
-  "alumniOf": [
-    {
-      "@type": "CollegeOrUniversity",
-      "name": "University of South Florida",
-      "url": "https://www.usf.edu",
-      "sameAs": "https://en.wikipedia.org/wiki/University_of_South_Florida"
-    },
-    {
-      "@type": "CollegeOrUniversity",
-      "name": "Rowan University",
-      "url": "https://www.rowan.edu",
-      "sameAs": "https://en.wikipedia.org/wiki/Rowan_University"
-    }
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  '@id': 'https://aakash-tripathi.github.io/#person',
+  name: profile.name,
+  givenName: 'Aakash',
+  familyName: 'Tripathi',
+  honorificSuffix: 'Ph.D.',
+  jobTitle: `${profile.role} - ${profile.focus}`,
+  description: profile.summary,
+  url: 'https://aakash-tripathi.github.io',
+  image: 'https://aakash-tripathi.github.io/assets/profile-photo.jpg',
+  email: profile.email,
+  address: { '@type': 'PostalAddress', addressLocality: 'Tampa', addressRegion: 'FL', addressCountry: 'US' },
+  worksFor: { '@type': 'Organization', name: profile.organization, url: profile.organizationUrl },
+  alumniOf: education.map((e) => ({ '@type': 'CollegeOrUniversity', name: e.institution })),
+  award: awards.map((a) => `${a.title} - ${a.venue} (${a.date})`),
+  knowsAbout: [
+    'Multimodal representation learning',
+    'Foundation models',
+    'Large language models',
+    'Survival analysis',
+    'Clinical natural language processing',
+    'Computational pathology',
+    'Precision oncology',
   ],
-  "memberOf": [
-    {
-      "@type": "Organization",
-      "name": "IEEE Eta Kappa Nu (IEEE-HKN) Honors Society",
-      "url": "https://hkn.ieee.org"
-    },
-    {
-      "@type": "Organization",
-      "name": "Institute of Electrical and Electronics Engineers (IEEE)",
-      "url": "https://www.ieee.org",
-      "sameAs": "https://en.wikipedia.org/wiki/Institute_of_Electrical_and_Electronics_Engineers"
-    }
-  ],
-  "award": [
-    "Best Poster Award - 2024 Dr. Robert Gillies Machine Learning Workshop in Cancer ($1,000)",
-    "2nd Position - Moffitt Cancer Center Annual Bio-Data Club Hackathon (2024)",
-    "Graduate Assistantship Award - University of South Florida (2022-2025)",
-    "Dean's List - Rowan University (2018-2022)"
-  ],
-  "knowsAbout": [
-    "Machine Learning",
-    "Artificial Intelligence",
-    "Deep Learning",
-    "Medical AI",
-    "Multimodal Data Integration",
-    "Oncology Research",
-    "Computer Vision",
-    "Natural Language Processing",
-    "Foundation Models",
-    "Cancer Research"
-  ],
-  "sameAs": [
-    "https://www.linkedin.com/in/aakash-tripathi/",
-    "https://www.researchgate.net/profile/Aakash-Tripathi-2",
-    "https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en",
-    "https://orcid.org/0000-0001-7231-0487",
-    "https://github.com/lab-rasool",
-    "https://huggingface.co/Lab-Rasool"
-  ],
-  "identifier": [
-    {
-      "@type": "PropertyValue",
-      "propertyID": "ORCID",
-      "value": "0000-0001-7231-0487"
-    },
-    {
-      "@type": "PropertyValue",
-      "propertyID": "Google Scholar",
-      "value": "7X57fGgAAAAJ"
-    }
-  ],
-  "worksFor": {
-    "@type": "Organization",
-    "name": "H. Lee Moffitt Cancer Center and Research Institute",
-    "url": "https://www.moffitt.org"
-  }
+  sameAs: [links.scholar, links.orcid, links.github, links.huggingface, links.linkedin, links.researchgate],
 };
 ---
 
-<StructuredData data={personSchema} />
+<Layout title="Aakash Tripathi, PhD | AI for Precision Oncology">
+  <StructuredData data={personSchema} />
 
-<Layout title="Aakash Tripathi - Research Portfolio">
-  <div class="hero">
-    <div class="container">
-      <div class="hero-content">
-        <div class="hero-text">
-          <h1>Aakash Tripathi, Ph.D.</h1>
-          <p class="subtitle">Machine Learning Engineer</p>
-          <p class="description">
-            Department of Machine Learning, <a href="https://lab.moffitt.org/Rasool/" target="_blank">H. Lee Moffitt Cancer Center and Research Institute</a>
-          </p>
-          <div class="hero-links">
-            <a href="https://www.linkedin.com/in/aakash-tripathi/" target="_blank" class="btn">LinkedIn</a>
-            <a href="https://www.researchgate.net/profile/Aakash-Tripathi-2" target="_blank" class="btn">ResearchGate</a>
-            <a href="https://github.com/lab-rasool" target="_blank" class="btn">GitHub</a>
-            <a href="https://huggingface.co/Lab-Rasool" target="_blank" class="btn">Hugging Face</a>
-            <a href="https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en" target="_blank" class="btn">Google Scholar</a>
-            <a href="https://orcid.org/0000-0001-7231-0487" target="_blank" class="btn">ORCID</a>
-          </div>
-        </div>
-        <div class="hero-image">
-          <img src="/assets/profile-photo.jpg" alt="Aakash Tripathi" />
-        </div>
-      </div>
+  <section class="container hero">
+    <h1>Hello! I am Aakash, an AI research scientist working in precision oncology.</h1>
+    <img class="hero__photo" src={profile.photo} alt={`Portrait of ${profile.name}`} width="800" height="800" />
+  </section>
+
+  {slides.length > 0 && <Carousel slides={slides} label="Talks, posters and paper figures" />}
+
+  <hr class="rule" />
+  <section class="container home-split">
+    <div>
+      <h2>Recent news</h2>
+      <ol class="news">
+        {
+          news.slice(0, 7).map((n) => (
+            <li>
+              <time datetime={n.date}>{formatDate(n.date)}</time>
+              <span>
+                {n.href ? (
+                  <a href={n.href} {...(n.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+                    {n.text}
+                  </a>
+                ) : (
+                  n.text
+                )}
+              </span>
+            </li>
+          ))
+        }
+      </ol>
+      {citations && <p class="citations">{citations.toLocaleString('en-US')} citations on <a href={links.scholar} target="_blank" rel="noopener noreferrer">Google Scholar</a></p>}
     </div>
-  </div>
+    <div>
+      <h2>From the blog</h2>
+      <div class="home-posts">
+        {posts.slice(0, 2).map((p) => <BlogCard post={p} excerpt={false} />)}
+      </div>
+      <p class="more"><a class="button button--ghost" href="/blog/">All posts</a></p>
+    </div>
+  </section>
 
-  <SectionContainer title="Education" id="education">
-    <Education />
-  </SectionContainer>
-
-  <SectionContainer title="Experience" id="experience">
-    <Experience />
-  </SectionContainer>
-
-  <SectionContainer title="Honors & Awards" id="awards">
-    <Awards />
-  </SectionContainer>
-
-  <SectionContainer title="Publications" id="publications">
-    <p class="section-links">
-      View complete list on 
-      <a href="https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en" target="_blank">Google Scholar</a> | 
-      <a href="https://orcid.org/0000-0001-7231-0487" target="_blank">ORCID</a>
-    </p>
-    <Publications />
-    <p class="read-more">
-      <a href="/publications" class="btn btn-secondary">View All Publications</a>
-    </p>
-  </SectionContainer>
 </Layout>
 
 <style>
   .hero {
-    background-color: var(--color-light);
-    padding: 4rem 0;
-  }
-
-  .hero-content {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: 48px;
     align-items: center;
-    gap: 2rem;
-  }
-
-  .hero-text {
-    flex: 1;
-  }
-
-  .hero-image {
-    flex: 1;
-    text-align: center;
-  }
-
-  .hero-image img {
-    max-width: 300px;
-    border-radius: 50%;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    padding-top: 56px;
+    padding-bottom: 72px;
   }
 
   h1 {
-    font-size: 3rem;
-    margin-bottom: 0.5rem;
+    font-size: clamp(2.3rem, 4.6vw, 4rem);
+    line-height: 1.25;
+    text-align: center;
+    margin: 0;
+    padding: 0 4%;
   }
 
-  .subtitle {
-    font-size: 1.5rem;
-    color: var(--color-primary);
-    margin-bottom: 1rem;
+  .hero__photo {
+    justify-self: center;
+    width: min(100%, 400px);
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    object-position: 50% 30%;
   }
 
-  .description {
-    font-size: 1.25rem;
-    margin-bottom: 2rem;
+  @media (max-width: 820px) {
+    .hero {
+      grid-template-columns: 1fr;
+    }
+
+    .hero__photo {
+      order: -1;
+      width: min(70%, 320px);
+    }
   }
 
-  .hero-links {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
+  .home-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 72px;
+    padding-top: 88px;
+    padding-bottom: 104px;
   }
 
-  .btn {
-    display: inline-block;
-    background-color: var(--color-primary);
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    font-weight: 500;
-    transition: background-color 0.3s ease;
+  .home-split h2 {
+    font-size: clamp(1.7rem, 2.8vw, 2.2rem);
+    margin-bottom: 28px;
   }
 
-  .btn:hover {
-    background-color: #0051bb;
-    text-decoration: none;
+  @media (max-width: 900px) {
+    .home-split {
+      grid-template-columns: 1fr;
+    }
   }
 
-  .btn-secondary {
-    background-color: transparent;
-    color: var(--color-primary);
-    border: 1px solid var(--color-primary);
+  .news {
+    list-style: none;
+    margin: 0;
+    padding: 0;
   }
 
-  .btn-secondary:hover {
-    background-color: var(--color-primary);
-    color: white;
+  .news li {
+    display: grid;
+    grid-template-columns: 104px 1fr;
+    gap: 18px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.92rem;
   }
 
-  .section-links {
-    margin-bottom: 2rem;
+  .news li:first-child {
+    padding-top: 0;
   }
 
-  .read-more {
-    margin-top: 2rem;
+  .news time {
+    font-size: 0.8rem;
+    color: var(--muted-color);
+    padding-top: 2px;
+  }
+
+  .news a {
+    text-decoration-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .citations {
+    margin-top: 28px;
+    font-size: 0.86rem;
+    color: var(--muted-color);
+  }
+
+  .home-posts :global(h3) {
+    font-size: 1.2rem;
+  }
+
+  .home-posts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+
+  @media (max-width: 560px) {
+    .home-posts {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .more {
+    margin-top: 36px;
     text-align: center;
   }
 
-  @media (max-width: 768px) {
-    .hero-content {
-      flex-direction: column-reverse;
-    }
-
-    .hero-image img {
-      max-width: 200px;
-      margin-bottom: 2rem;
-    }
-
-    h1 {
-      font-size: 2.5rem;
-    }
-  }
 </style>

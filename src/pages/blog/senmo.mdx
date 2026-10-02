@@ -1,0 +1,255 @@
+---
+layout: ../../layouts/ArticleLayout.astro
+title: "SeNMo: learning pan-cancer prognosis from sparse multi-omics data"
+short: "SeNMo"
+subtitle: "A self-normalizing network trained on five omics layers plus clinical variables from TCGA, then adapted to predict survival, cancer type and TLS ratio."
+description: "SeNMo, a self-normalizing network on five omics layers plus clinical data from 33 TCGA cancers, reaches a C-index of 0.758 for survival on held-out data."
+published: "2025-07-30"
+venue: "International Journal of Molecular Sciences"
+role: "Co-developed SeNMo; co-first author"
+doi: "10.3390/ijms26157358"
+paperTitle: "Self-Normalizing Multi-Omics Neural Network for Pan-Cancer Prognostication"
+authors: ["Asim Waqas", "Aakash Tripathi", "Sabeen Ahmed", "Ashwin Mukund", "Hamza Farooq", "Joseph O. Johnson", "Paul A. Stewart", "Mia Naeini", "Matthew B. Schabath", "Ghulam Rasool"]
+affiliations: ["Moffitt Cancer Center and Research Institute", "University of South Florida", "University of Minnesota", "Huntsman Cancer Institute, University of Utah"]
+links:
+  - { label: "Paper", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC12347193/" }
+  - { label: "Code", url: "https://github.com/lab-rasool/SeNMo" }
+  - { label: "Weights", url: "https://huggingface.co/Lab-Rasool/SeNMo" }
+  - { label: "Embeddings", url: "https://huggingface.co/datasets/Lab-Rasool/TCGA" }
+tags: ["multi-omics", "survival analysis", "pan-cancer", "tcga"]
+order: 5
+citation: "Waqas A, Tripathi A, Ahmed S, Mukund A, Farooq H, Johnson JO, et al. Self-Normalizing Multi-Omics Neural Network for Pan-Cancer Prognostication. Int J Mol Sci. 2025;26(15):7358. doi:10.3390/ijms26157358"
+bibtex: |
+  @article{waqas2025senmo,
+    title   = {Self-Normalizing Multi-Omics Neural Network for Pan-Cancer Prognostication},
+    author  = {Waqas, Asim and Tripathi, Aakash and Ahmed, Sabeen and Mukund, Ashwin and Farooq, Hamza and Johnson, Joseph O. and Stewart, Paul A. and Naeini, Mia and Schabath, Matthew B. and Rasool, Ghulam},
+    journal = {International Journal of Molecular Sciences},
+    year    = {2025},
+    volume  = {26},
+    number  = {15},
+    pages   = {7358},
+    doi     = {10.3390/ijms26157358}
+  }
+coverAlt: "Overview figure of the SeNMo self-normalizing multi-omics framework"
+coverCaption: |-
+  Overview of SeNMo, from the preprint. Reproduced from <a href='https://arxiv.org/abs/2405.08226'>Waqas et al. (2024)</a>, <em>arXiv</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>.
+---
+
+import Sidenote from '../../components/article/Sidenote.astro';
+import Note from '../../components/article/Note.astro';
+import Figure from '../../components/article/Figure.astro';
+import BarChart from '../../components/article/BarChart.astro';
+import Stats from '../../components/article/Stats.astro';
+import { Image } from 'astro:assets';
+import overviewImg from '../../assets/blog/senmo/overview.png';
+import architectureImg from '../../assets/blog/senmo/architecture.png';
+import kmImg from '../../assets/blog/senmo/results-km-risk-terciles.png';
+import perCancerImg from '../../assets/blog/senmo/results-per-cancer-cindex.png';
+import tlsImg from '../../assets/blog/senmo/results-tls-ratio.png';
+import rmsurvImg from '../../assets/blog/senmo/rmsurv-late-fusion.png';
+
+A tumor's molecular profile is spread across several assays: RNA sequencing, DNA methylation arrays, miRNA sequencing, protein arrays and somatic mutation calls. Each one is high-dimensional, each is measured on its own scale, and in real cohorts many patients are missing one or more of them. Clinicians and researchers still want answers to simple questions from all of that: how long is this patient likely to live, what is the tissue of origin, and what does the immune microenvironment look like?
+
+SeNMo, our self-normalizing multi-omics network, is an attempt to answer those questions with one model. It is a deep network built from self-normalizing layers and trained on gene expression, DNA methylation, miRNA, somatic mutation and protein expression together with four clinical variables from 33 cancer types in The Cancer Genome Atlas (TCGA). The same backbone is then fine-tuned for other cohorts and other tasks.[^senmo]
+
+On a held-out TCGA test set of 2,754 patients, SeNMo reached a concordance index of 0.758 for overall survival. A linear head on the same backbone classified primary cancer type with 99.8% accuracy, and a fine-tuned version predicted tertiary lymphoid structure (TLS) ratios on a Moffitt Cancer Center cohort without a significant difference from expert annotations. Asim Waqas led the study as first and corresponding author; I co-developed SeNMo and am co-first author.
+
+## Why omics are hard
+
+Multi-omics is a textbook "big P, small n" problem. TCGA methylation data alone has 485,576 CpG sites per sample, and gene expression has 60,483 features, while individual cancer types in our TCGA cohort range from 51 to 1,260 cases. The data also carry correlated features, different measurement scales, technical noise and missing values, within and across datasets.
+
+Standard architectures each struggle here. Plain feedforward networks overfit and are sensitive to perturbations during training. CNNs rely on a spatial-invariance assumption and a fixed input size, and they handle sparse omics inputs inefficiently. Transformers are built around attention over sequences, which suits highly sparse molecular vectors poorly. Many existing multi-omics models also cover only one omics layer or one cancer type, or need heavy feature engineering for each modality.
+
+## The approach
+
+We combined three ideas. First, use our MINDS framework to assemble a machine-learning-ready pan-cancer cohort from TCGA through the GDC and the UCSC Xena portal.[^minds] Second, reduce every modality with simple, reproducible filters and concatenate the result into one fixed-length vector per patient (early fusion). Third, learn from that vector with a network whose layers keep activations close to zero mean and unit variance, so a deep model can train stably on very wide, sparse input.
+
+<Figure caption="(A) Number of cases for each TCGA cancer type and (B) survival in years for every patient, marked as censored or dead. (C) Overview of the SeNMo framework: data from public and private sources are collected with MINDS and curated into the multi-omics dataset, and the learned weights are reused for prognostic and diagnostic tasks. (D) Feature processing for the six data types, unified across cancers and then across modalities into an 80,697-feature multi-omics matrix. (E) Study design: a baseline trained on 33 TCGA cancer types for overall survival, then varied in data and task (red borders mark a change from the baseline). Reproduced from <a href='https://doi.org/10.3390/ijms26157358'>Waqas et al. (2025)</a>, <em>International Journal of Molecular Sciences</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>." wide={true}>
+<Image src={overviewImg} alt="Five-panel figure. A: horizontal bar chart of case counts for 33 TCGA cancer types, from breast invasive carcinoma at about 1,250 down to diffuse large B-cell lymphoma. B: per-patient survival lines up to about 30 years, colored by cancer type. C: data sources (NCI Genomic Data Commons, UCSC Xena, cBioPortal) feed the MINDS cloud system, which supplies DNA methylation, gene expression, miRNA, mutation, protein and clinical data to the SeNMo model with hidden layers 1024, 512, 256, 128, 48, 48, 48 and a prediction head for survival, TLS ratio, cancer type and stage. D: per-modality preprocessing from 566,520 raw features to 80,697 unified features. E: table of five study settings across learning regime, data and task." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+## How it works
+
+### One vector per patient
+
+Each molecular modality went through the same sequence of filters, with thresholds set per modality. We removed features that were NaN in all samples, dropped near-constant features with a 0.998 threshold, removed duplicate features and filtered low-variance ones. For gene expression we also kept only features with log-transformed expression above 7 (127 FPKM). Missing values within a modality and cancer type were imputed with the feature mean; missing features across cancers and modalities were zero-padded.
+
+<Figure caption="Feature dimensions before and after preprocessing. Ranges are per cancer type across the 33 TCGA cohorts; combined counts are the union across cancers. The final per-patient input has 80,697 features, including four clinical variables (age, gender, race and stage).">
+
+| Modality | Raw features | After preprocessing |
+| --- | --- | --- |
+| DNA methylation | 485,576 | 4,006 to 4,762 per cancer type; 52,396 combined |
+| Gene expression (RNA-seq) | 60,483 | 772 to 3,671 per cancer type; 8,794 combined |
+| miRNA expression | 1,880 | 967 to 1,460 per cancer type; 1,730 combined |
+| Protein expression (RPPA) | 487 | 472 |
+| Somatic mutation | 18,090 | 17,253 |
+
+</Figure>
+
+### Self-normalizing blocks
+
+Each SeNMo block is a linear layer followed by a scaled exponential linear unit (SELU) and Alpha-Dropout. SELU is defined as
+
+$$
+\mathrm{SELU}(x) = \lambda \begin{cases} x & \text{if } x > 0 \\ \alpha\,(e^{x} - 1) & \text{if } x \le 0 \end{cases}
+$$
+
+with $\lambda = 1.05071$ and $\alpha = 1.6733$, the values the paper reports. Klambauer and colleagues showed that with these constants, activations that start near zero mean and unit variance converge to that fixed point as they pass through many layers.[^snn] Alpha-Dropout is a dropout variant that preserves this property. The final SeNMo encoder has seven hidden layers, ends in a 48-dimensional patient embedding and has 83.33 million parameters.
+
+<Sidenote>
+There is no separate normalization layer: SELU and Alpha-Dropout keep layer statistics stable on their own. The paper chose this design for wide, low-sample omics input, where it also limits vanishing and exploding gradients.
+</Sidenote>
+
+<Figure caption="Architecture of the SeNMo encoder network: seven hidden layers, each a linear unit followed by SELU activation and Alpha-Dropout, with the number of neurons in every layer shown. The trained model has 83.33 million parameters, and the same model is used for regression (overall survival) and classification (primary cancer type). Reproduced from <a href='https://doi.org/10.3390/ijms26157358'>Waqas et al. (2025)</a>, <em>International Journal of Molecular Sciences</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>.">
+<Image src={architectureImg} alt="Diagram of an input feature vector feeding seven SeNMo layer blocks of decreasing size (1024, 512, 256, 128, 48, 48, 48 dimensions), branching into a one-dimensional overall survival output and a 33-dimensional primary cancer type output. A box notes that each block is a linear unit plus SELU activation plus AlphaDropout." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 700px, 100vw" />
+</Figure>
+
+### Training objective
+
+Overall survival is modeled with the negative Cox partial log-likelihood. For a batch of $N$ patients with predicted log-hazards $\theta_i$ and event indicators $\delta_i$:
+
+$$
+\mathcal{L}_{\text{cox}} = -\frac{1}{N} \sum_{i=1}^{N} \Big( \theta_i - \log \sum_{j=1}^{N} e^{\theta_j} R_{ij} \Big)\, \delta_i
+$$
+
+where $R_{ij} = 1$ if patient $j$ is still at risk at patient $i$'s event time. The full objective is a weighted sum $\mathcal{L} = \lambda_c \mathcal{L}_{\text{cox}} + \lambda_{ce} \mathcal{L}_{\text{ce}} + \lambda_r \mathcal{L}_{\text{reg}}$, adding cross-entropy for cancer type and an L1 penalty on the weights. For TLS ratio regression we used a Huber loss.
+
+## Data and evaluation
+
+For survival, each cancer type was split 80/20 into a training-validation set and a held-out test set. The pooled training-validation cohort had 11,050 patients, trained with 10-fold cross-validation, and the pooled test set had 2,754 patients. That gave ten checkpoints. We report both their mean test C-index and an ensemble that averages their predictions.
+
+<Sidenote>
+The concordance index (C-index) is the fraction of comparable patient pairs that the model ranks in the right order: 0.5 is chance and 1.0 is perfect ranking. The paper computes it with the Lifelines library.
+</Sidenote>
+
+We ran about 400 hyperparameter configurations with Weights & Biases. Training the final model took about 11 hours on one Tesla V100 (32 GB), and fine-tuning on a cohort of around 150 patients took about 15 minutes. External evaluation used two lung squamous cell carcinoma (LSCC) cohorts: the public CPTAC-LSCC proteogenomic cohort and an independent 108-patient cohort from Moffitt Cancer Center.
+
+## Results
+
+<Stats items={[
+  {value: '0.758', label: 'C-index, held-out TCGA test set (ensemble)'},
+  {value: '2,754', label: 'patients in the pooled test set'},
+  {value: '99.8%', label: '33-class cancer type accuracy'},
+  {value: '0.730', label: 'C-index, CPTAC-LSCC after fine-tuning (ensemble)'}
+]} />
+
+### Survival across modalities
+
+The full six-modality model scored a mean C-index of 0.757 across the ten checkpoints and 0.758 as an ensemble. To see how much each data layer contributes, we retrained on subsets of the modalities. Performance fell off gradually rather than collapsing: gene expression alone still reached 0.728.
+
+<Figure caption="Overall survival C-index on the held-out pan-cancer TCGA test set by input modalities (ensemble of ten checkpoints; the mean of single checkpoints is in the small note). 3-modal = gene expression, methylation and miRNA; 4-modal adds protein; 5-modal adds mutation; 6-modal adds clinical variables.">
+<BarChart
+  mark="dot"
+  min={0.6}
+  max={0.8}
+  decimals={3}
+  axisLabel="C-index (held-out test, ensemble)"
+  rows={[
+    {label: 'DNA methylation', value: 0.650, note: 'checkpoint mean 0.644'},
+    {label: 'miRNA', value: 0.702, note: 'checkpoint mean 0.686'},
+    {label: 'Gene expression', value: 0.728, note: 'checkpoint mean 0.718'},
+    {label: '3-modal', value: 0.726, note: 'checkpoint mean 0.725'},
+    {label: '4-modal', value: 0.751, note: 'checkpoint mean 0.746'},
+    {label: '5-modal', value: 0.749, note: 'checkpoint mean 0.746'},
+    {label: '6-modal (SeNMo)', value: 0.758, note: 'checkpoint mean 0.757'}
+  ]}
+/>
+</Figure>
+
+Splitting the pooled test set into terciles of predicted hazard gave clearly separated Kaplan-Meier curves (log-rank $p = 1.16 \times 10^{-46}$ for low versus high risk). The integrated Brier score, which reflects both discrimination and calibration, was 0.125 in cross-validation and 0.158 on the held-out test set, against a non-informative reference of 0.25.
+
+<Figure caption="Kaplan-Meier curves for SeNMo risk stratification on the pan-cancer data, with patients split into low, intermediate and high-risk terciles at the 33rd and 66th percentiles of predicted hazard. Log-rank p-values are 1.66 × 10⁻⁵ for low vs. intermediate, 1.16 × 10⁻⁴⁶ for low vs. high and 1.92 × 10⁻²² for intermediate vs. high; shaded areas are 95% confidence intervals. Reproduced from <a href='https://doi.org/10.3390/ijms26157358'>Waqas et al. (2025)</a>, <em>International Journal of Molecular Sciences</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>.">
+<Image src={kmImg} alt="Kaplan-Meier plot of survival probability against survival time up to about 25 years. The low-risk curve (green) stays highest, near 0.5 after 15 years; the intermediate curve (blue) falls below 0.4 by about 10 years; the high-risk curve (orange) drops fastest, to about 0.1 by 10 years." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 700px, 100vw" />
+</Figure>
+
+Evaluated one cancer at a time, the pan-cancer model gave statistically significant C-indices for 29 of 33 cancer types, with the best result in pheochromocytoma and paraganglioma (0.900 test, 0.929 ensemble). Four cohorts (GBM, LAML, PRAD and TGCT) were not significant at first. A ten-epoch fine-tune brought GBM, LAML and PRAD to 0.650, 0.626 and 0.542 (ensemble), while TGCT remained a failure case.
+
+<Sidenote>
+Some folds for these cancers contained no observed deaths. PRAD and TGCT had only 12 and 3 events in their training-validation sets, and the TCGA Pan-Cancer Clinical Data Resource already advises against using overall survival for TGCT.[^tcgacdr]
+</Sidenote>
+
+<Figure caption="Tumor-specific C-indices for SeNMo across 32 TCGA cancer types and the two external lung squamous cohorts. Pink box plots are zero-shot predictions on each held-out TCGA subset; green box plots are after a brief ten-epoch fine-tune, used where baseline performance was not significant or the cohort was unseen (CPTAC-LSCC, Moffitt-LSCC). Triangles mark ensemble estimates. Reproduced from <a href='https://doi.org/10.3390/ijms26157358'>Waqas et al. (2025)</a>, <em>International Journal of Molecular Sciences</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>." wide={true}>
+<Image src={perCancerImg} alt="Box plots of C-index per cancer type, sorted from PCPG near 0.91 down through ACC, UVM, LGG and others to OV near 0.52, with DLBC and READ after. Green fine-tuned boxes on the right for GBM, LAML, PRAD, Moffitt-LSCC and CPTAC-LSCC sit between about 0.56 and 0.70." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+### External cohorts
+
+Zero-shot transfer did not work well. On CPTAC-LSCC the model was at chance level, and on the Moffitt cohort it was only modestly above. A short fine-tune changed that:
+
+<Figure caption="Overall survival C-index on the two external lung squamous cell carcinoma cohorts, reported as test / ensemble. Fine-tuning ran for ten epochs with all layers unfrozen.">
+
+| Cohort | Zero-shot | After 10-epoch fine-tune |
+| --- | --- | --- |
+| CPTAC-LSCC | 0.48 / 0.50 | 0.677 / 0.730 |
+| Moffitt-LSCC | 0.581 / 0.590 | 0.647 / 0.656 |
+
+</Figure>
+
+<Note title="Fine-tuning an MLP backbone" variant="warning">
+
+Our first attempts at fine-tuning ran into catastrophic forgetting: the model would not converge on either new cohort, especially when we froze some hidden layers and trained the rest at lower learning rates. What worked was unfreezing every layer and training for just 10 epochs with a very small learning rate ($4 \times 10^{-5}$), high weight decay and dropout of 0.35.
+
+</Note>
+
+### Cancer type and TLS
+
+For diagnosis, we framed tissue of origin as a 33-way classification. We removed stage from the clinical inputs because its distribution differs across cancers and would leak the label. SeNMo reached 99.8% accuracy on the test set for both single-checkpoint and ensemble inference. The remaining errors were between biologically related pairs such as colon and rectal adenocarcinoma.
+
+For the immune microenvironment, we fine-tuned the backbone on the Moffitt LSCC cohort to regress the tissue-level TLS ratio (segmented TLS area divided by total tissue area). The labels came from H&E and CD20-stained whole-slide images analyzed in Visiopharm with manual review. Using cross-validation on 76 patients and a held-out set of 20, SeNMo's predictions showed no significant difference from the manual annotations (paired comparison, $p = 0.064$). Patients split into high and low TLS groups by SeNMo's predictions had a stronger survival separation (log-rank $p = 2.5 \times 10^{-4}$) than the split by manual labels ($p = 0.019$).
+
+<Sidenote>
+Tertiary lymphoid structures are immune-cell aggregates that resemble secondary lymphoid organs and form in inflamed tissue, including tumors. They are associated with better survival and response to immunotherapy.
+</Sidenote>
+
+<Figure caption="TLS ratio prediction by SeNMo on the Moffitt LSCC cohort: the split of 103 samples into training, validation and held-out test sets, with samples missing TLS labels excluded; TLS ratios from manual annotations (M) and SeNMo predictions, with no significant difference (p = 0.064); violin plots of annotated and predicted ratios split into high and low groups at the median, both significantly separated; and Kaplan-Meier curves for high versus low TLS ratio from the annotations (p = 0.019) and from SeNMo's predictions (p = 2.5 × 10⁻⁴). Reproduced from <a href='https://doi.org/10.3390/ijms26157358'>Waqas et al. (2025)</a>, <em>International Journal of Molecular Sciences</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>." wide={true}>
+<Image src={tlsImg} alt="Multi-panel figure. A donut chart of 103 samples: 68 training, 8 validation, 20 held-out test and 7 missing TLS labels. A box plot comparing manual and SeNMo TLS ratios with p = 0.064. Violin plots of high and low TLS groups for targets and predictions. Two Kaplan-Meier plots of surviving fraction over 12 years for low and high TLS groups, labeled Target (p = 0.019) and Predictions (p = 2.5 × 10⁻⁴)." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+<Note title="Key takeaway" variant="info">
+
+A single self-normalizing backbone trained for survival on 33 TCGA cancer types also carries enough signal for tissue-of-origin classification and, after fine-tuning, TLS ratio regression. In the modality ablations, performance degraded gracefully as data layers were withheld, and the model needed a short fine-tune to transfer to new institutions.
+
+</Note>
+
+## What we learned
+
+The paper is open about where SeNMo falls short. Four cancer types started with low C-indices, and TGCT never recovered, so a shared model can still miss molecular features specific to one tumor type. External validation covered only one public and one internal cohort, both lung squamous cell carcinoma, so we need more histologies before making broad claims about generalization. The TLS labels came from an image-analysis pipeline, which adds measurement noise of its own. Zero-shot transfer was weak, and the MLP backbone was prone to forgetting during fine-tuning.
+
+On the positive side, more modalities generally helped, and performance degraded gracefully as layers were withheld, down to gene expression alone. The paper points out that incomplete data is common in routine oncology practice. The ingestion step is also modular: an RNA-seq matrix processed with limma-voom or the DESeq2 variance-stabilizing transform can go into the same encoder without changing the network. The paper's future directions are contrastive pre-training with synthetic modality dropout, adding spatial transcriptomics and digital pathology features, adapting the encoder to new inputs such as copy-number data, and prospective validation in molecular tumor boards.
+
+## The broader survival thread
+
+SeNMo started as an AACR 2024 abstract and an arXiv preprint before the journal version.[^aacr2024][^arxiv] Several other projects in our group study the same question of how to combine modalities for survival prediction.
+
+**RMSurv.** Dominic Flack (Rochester Institute of Technology), whom I mentored from August 2024 to February 2025, led *Robust Multimodal Fusion for Survival Prediction in Cancer Patients* with Dimah Dera; Asim Waqas, Ghulam Rasool and I contributed.[^rmsurv] RMSurv takes the opposite approach to SeNMo's early fusion. It trains a separate discrete-time survival model for each modality (twenty 6-month bins over 10 years) and learns late-fusion weights. To set those weights, it builds a synthetic dataset that keeps the real cross-modality correlations and matches each modality's nested cross-validation C-index, then searches for the best weights, optionally one per time bin (TD-RMSurv). Pathology reports were one of its modalities, embedded with GatorTron through HONeYBEE.
+
+<Figure caption="Schematic of RMSurv's late fusion. Up to six unimodal models are trained separately and output their own survival predictions, which are normalized, combined with linear weights (optionally time-dependent) and normalized again. Reproduced from <a href='https://doi.org/10.1177/11769351251376192'>Flack et al. (2025)</a>, <em>Cancer Informatics</em>, <a href='https://creativecommons.org/licenses/by-nc/4.0/'>CC BY-NC 4.0</a>." wide={true}>
+<Image src={rmsurvImg} alt="Five-column grid. Rows for clinical data, miRNA, pathology report, DNA methylation, protein expression and gene expression each show a unimodal survival curve, its normalized version and a bar chart of time-dependent weights over 10 years; the last column shows the single combined, normalized survival curve." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+On the six-modality TCGA lung adenocarcinoma dataset, RMSurv improved on the best unimodal C-index by 0.0273, compared with 0.0143 for an existing late-fusion method and 0.0072 for early fusion. On the 11,060-case pan-cancer dataset, TD-RMSurv reached a cross-validated C-index of 0.7533 with six modalities. The learned weights are also interpretable. In one combined LUAD + LUSC fold, the model put 90% of the weight on clinical data in the first six-month bin, likely because of stage, and shifted weight to other modalities later. The code is public.[^rmsurvcode]
+
+**PARADIGM.** Asim Waqas led this project as first author, and I contributed. PARADIGM uses SeNMo as its omics encoder. It generates embeddings with modality-specific foundation models, aggregates them into patient-level representations, fuses them into a graph whose nodes are patients and trains a graph neural network for survival. In the pan-squamous preprint, SeNMo produces the 48-dimensional omics embedding, UNI encodes slides and GatorTron encodes clinical text and pathology reports. A graph convolutional network was trained on five TCGA squamous cell carcinomas with 7-fold cross-validation, and the framework was also evaluated on a 103-patient Moffitt lung SCC cohort.[^pansq] The AACR 2025 abstract extends the analysis to five adenocarcinomas and reports significant improvements over unimodal and multimodal MLP, Transformer and XGBoost models.[^paradigm]
+
+Multimodal survival prediction from precomputed embeddings continues in [EAGLE](/blog/eagle/) (Efficient Alignment of Generalized Latent Embeddings), which adds attention-based fusion and interpretable attribution analysis. SeNMo's TCGA molecular embeddings are distributed alongside the [HONeYBEE](/blog/honeybee/) embedding resource.
+
+## Resources
+
+- **Paper:** open access in the *International Journal of Molecular Sciences*.[^senmo]
+- **Code:** training, fine-tuning, testing and ensemble scripts at [lab-rasool/SeNMo](https://github.com/lab-rasool/SeNMo).[^code]
+- **Weights:** the ten pan-cancer checkpoints on [Hugging Face](https://huggingface.co/Lab-Rasool/SeNMo) and on Zenodo in two parts.[^zenodo]
+- **Embeddings:** TCGA molecular embeddings in the `molecular` configuration (`senmo` split) of [Lab-Rasool/TCGA](https://huggingface.co/datasets/Lab-Rasool/TCGA).
+- **Data curation:** [MINDS](/blog/minds/), used to build the TCGA cohorts.
+
+[^senmo]: Waqas A, Tripathi A, Ahmed S, Mukund A, Farooq H, Johnson JO, Stewart PA, Naeini M, Schabath MB, Rasool G. Self-Normalizing Multi-Omics Neural Network for Pan-Cancer Prognostication. *Int J Mol Sci.* 2025;26(15):7358. [doi:10.3390/ijms26157358](https://doi.org/10.3390/ijms26157358). Open access at [PMC12347193](https://pmc.ncbi.nlm.nih.gov/articles/PMC12347193/).
+[^arxiv]: Waqas A, Tripathi A, Ahmed S, et al. Self-Normalizing Foundation Model for Enhanced Multi-Omics Data Analysis in Oncology. arXiv:2405.08226, 2024. [arxiv.org/abs/2405.08226](https://arxiv.org/abs/2405.08226).
+[^aacr2024]: Waqas A, Tripathi A, Ahmed S, Mukund A, Stewart P, Naeini M, Farooq H, Rasool G. SeNMo: A self-normalizing deep learning model for enhanced multi-omics data analysis in oncology. *Cancer Res.* 2024;84(6 Suppl):908. [doi:10.1158/1538-7445.AM2024-908](https://doi.org/10.1158/1538-7445.AM2024-908).
+[^snn]: Klambauer G, Unterthiner T, Mayr A, Hochreiter S. Self-Normalizing Neural Networks. arXiv:1706.02515, 2017. [arxiv.org/abs/1706.02515](https://arxiv.org/abs/1706.02515).
+[^minds]: Tripathi A, Waqas A, Venkatesan K, Yilmaz Y, Rasool G. Building Flexible, Scalable, and Machine Learning-Ready Multimodal Oncology Datasets. *Sensors.* 2024;24(5):1634. [doi:10.3390/s24051634](https://doi.org/10.3390/s24051634). Code: [github.com/lab-rasool/MINDS](https://github.com/lab-rasool/MINDS).
+[^tcgacdr]: Liu J, Lichtenberg T, Hoadley KA, et al. An Integrated TCGA Pan-Cancer Clinical Data Resource to Drive High-Quality Survival Outcome Analytics. *Cell.* 2018;173:400-416. [doi:10.1016/j.cell.2018.02.052](https://doi.org/10.1016/j.cell.2018.02.052).
+[^code]: SeNMo source code: [github.com/lab-rasool/SeNMo](https://github.com/lab-rasool/SeNMo).
+[^zenodo]: SeNMo model checkpoints and sample embeddings, Part 1: [doi:10.5281/zenodo.14219799](https://doi.org/10.5281/zenodo.14219799); Part 2: [doi:10.5281/zenodo.14286190](https://doi.org/10.5281/zenodo.14286190).
+[^rmsurv]: Flack D, Tripathi A, Waqas A, Rasool G, Dera D. Robust Multimodal Fusion for Survival Prediction in Cancer Patients. *Cancer Inform.* 2025;24:11769351251376192. [doi:10.1177/11769351251376192](https://doi.org/10.1177/11769351251376192).
+[^rmsurvcode]: RMSurv source code: [github.com/dom416/RMSurv](https://github.com/dom416/RMSurv).
+[^paradigm]: Waqas A, Tripathi A, Naeini M, Stewart PA, Schabath MB, Rasool G. PARADIGM: an embeddings-based multimodal learning framework with foundation models and graph neural networks [abstract]. *Cancer Res.* 2025;85(8 Suppl 1):991. [doi:10.1158/1538-7445.AM2025-991](https://doi.org/10.1158/1538-7445.AM2025-991).
+[^pansq]: Waqas A, Tripathi A, Stewart P, Naeini M, Schabath MB, Rasool G. Embedding-based Multimodal Learning on Pan-Squamous Cell Carcinomas for Improved Survival Outcomes. arXiv:2406.08521, 2024. [arxiv.org/abs/2406.08521](https://arxiv.org/abs/2406.08521).

@@ -1,0 +1,293 @@
+---
+layout: ../../layouts/ArticleLayout.astro
+title: "Gating, not averaging: HetMoE for transcription factor binding sites"
+short: "HetMoE"
+subtitle: "A dense mixture of experts that weights DeepBIND, DeepSEA and DanQ embeddings per input, tested on held-out transcription factors with fair negatives."
+description: "HetMoE gates frozen DeepBIND, DeepSEA and DanQ experts per input to predict TF binding sites on held-out factors; ShiftSmooth averages gradients over shifts."
+published: "2026-07-10"
+venue: "Mathematics"
+role: "Co-first author; developed the methods"
+doi: "10.3390/math14142489"
+paperTitle: "Robust Transcription Factor Binding Site Prediction and Explainability Using a Heterogeneous Mixture of Experts Architecture"
+authors: ["Aakash Tripathi", "Ian E. Nielsen", "Muhammad Umer", "Ravi P. Ramachandran", "Ghulam Rasool"]
+affiliations: ["Moffitt Cancer Center", "Rowan University", "Fairleigh Dickinson University"]
+links:
+  - { label: "Paper", url: "https://www.mdpi.com/2227-7390/14/14/2489" }
+  - { label: "Code", url: "https://github.com/lab-rasool/TFBS" }
+  - { label: "Dataset", url: "https://huggingface.co/datasets/Lab-Rasool/ENCODE-TFBS" }
+  - { label: "Weights", url: "https://huggingface.co/Lab-Rasool/ENCODE-TFBS" }
+tags: ["genomics", "mixture of experts", "explainability", "out-of-distribution"]
+order: 6
+citation: "Tripathi A, Nielsen IE, Umer M, Ramachandran RP, Rasool G. Robust Transcription Factor Binding Site Prediction and Explainability Using a Heterogeneous Mixture of Experts Architecture. Mathematics. 2026;14(14):2489. doi:10.3390/math14142489"
+bibtex: |
+  @article{tripathi2026hetmoe,
+    title   = {Robust Transcription Factor Binding Site Prediction and Explainability Using a Heterogeneous Mixture of Experts Architecture},
+    author  = {Tripathi, Aakash and Nielsen, Ian E. and Umer, Muhammad and Ramachandran, Ravi P. and Rasool, Ghulam},
+    journal = {Mathematics},
+    year    = {2026},
+    volume  = {14},
+    number  = {14},
+    pages   = {2489},
+    doi     = {10.3390/math14142489}
+  }
+coverAlt: "Four-panel schematic. A: a 101 bp DNA sequence is one-hot encoded into a 4 by L grid. B: a per-factor ConvNet expert maps the one-hot input to a 32-dimensional hidden layer, a fully connected layer and P(bound). C: the shared one-hot input feeds frozen ConvNet, DeepSEA, DanQ and DNABERT-6 experts for 7 factors, each producing a 32-dimensional embedding that enters a softmax gating network, then a weighted combine and fully connected layer that outputs P(bound). D: ShiftSmooth turns a noisy vanilla-gradient sequence logo into a smoothed one by shifting the input, running the MoE, shifting back and averaging."
+coverCaption: |-
+  Overview of HetMoE: (A) data preprocessing, (B) the per-factor expert, (C) the heterogeneous mixture and (D) ShiftSmooth explainability. A frozen pool of experts (modified-DeepBIND ConvNet, DeepSEA and DanQ, with fine-tuned DNABERT-6 as a candidate) for each of seven training factors reduces every input to 32-dimensional embeddings, and a gating network weights all experts per input to predict P(bound). Reproduced from <a href='https://doi.org/10.3390/math14142489'>Tripathi et al. (2026)</a>, <em>Mathematics</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>.
+---
+
+import Sidenote from '../../components/article/Sidenote.astro';
+import Note from '../../components/article/Note.astro';
+import Figure from '../../components/article/Figure.astro';
+import BarChart from '../../components/article/BarChart.astro';
+import Stats from '../../components/article/Stats.astro';
+import { Image } from 'astro:assets';
+import shiftsmoothImg from '../../assets/blog/hetmoe/shiftsmooth-schematic.png';
+import forestImg from '../../assets/blog/hetmoe/ood-per-factor-delta-auc.png';
+import gateImg from '../../assets/blog/hetmoe/gate-weights-heatmap.png';
+import attributionImg from '../../assets/blog/hetmoe/attribution-gata3.png';
+
+Transcription factors switch genes on and off by binding short DNA motifs, typically 5 to 20 nucleotides long. Convolutional models such as DeepBIND[^deepbind] predict those binding sites well for the factor they were trained on, but generalize poorly to binding patterns they have not seen. Several factors in this study are cancer-relevant: FOXM1 is often overexpressed in cancers, and STAT3 dysregulation is linked to several cancers.
+
+HetMoE (heterogeneous Mixture-of-Experts) addresses that gap. We train one expert per transcription factor and per backbone, freeze them all, and learn a small gating network that decides, for each input sequence, how much weight each expert's embedding gets. Alongside it we introduce ShiftSmooth, an attribution method that averages gradients over small shifts of the input so that motif explanations do not depend on where the sequence window starts.
+
+On 23 held-out transcription factors that bind a defined motif, HetMoE reaches a mean AUC of 0.821 ± 0.005 across three random seeds, compared with 0.799 ± 0.008 for a fine-tuned DNABERT-6. The gating mechanism accounts for the gain: on the canonical seed, a static average of the same experts scores 0.073 AUC lower.[^paper]
+
+This is joint work with Ian E. Nielsen (Rowan University), and Ian and I share first authorship. I developed the methods, and together we wrote the software, curated the data and drafted the manuscript. Muhammad Umer (Fairleigh Dickinson University), Ravi P. Ramachandran (Rowan University, corresponding author) and Ghulam Rasool (Moffitt Cancer Center) co-designed and supervised the study.
+
+## Why held-out factors are hard
+
+A sequence model for one factor learns that factor's motif grammar and has little to go on for another. Genomic language models such as DNABERT[^dnabert] aim to fill this gap with pretraining, but in a preliminary comparison on GATA3, embeddings taken directly from a pretrained DNABERT gave a lower test AUC than convolutional DeepBIND embeddings. A DNABERT-6 fine-tuned for binding-site prediction is a different matter, and it stays in the study as the strongest baseline.
+
+The evaluation has two common traps. First, many TFBS benchmarks create negatives by dinucleotide-shuffling the positives, and a classifier trained this way can learn to spot the shuffling artifact instead of binding.[^tourne] Second, some factors, such as the RNA polymerase II subunit POLR2A, have no intrinsic DNA motif and are recruited through protein-protein interactions, which caps any sequence-only prediction. Pooling them with motif-rich factors lets one easy factor dominate the average.
+
+## The approach
+
+HetMoE is a dense, "many experts to one output" mixture. A sparse mixture routes each input to a few experts; here every frozen expert processes every input, and the gate learns input-dependent softmax weights over their 32-dimensional embeddings.
+
+Unlike weighted averaging or bagging, the weights change with every input. Unlike stacking, the gate combines internal embeddings, not final predictions. Because the gate only ever sees embeddings, the experts need not share an architecture, which is what makes the pool heterogeneous.
+
+## How it works
+
+### Experts as embedding producers
+
+The base expert is a modified DeepBIND convolutional network. It keeps the convolution, ReLU and either max pooling or concatenated max and average pooling, chosen by Optuna hyperparameter search. It adds a linear layer that projects pooled features to a fixed 32-dimensional embedding, followed by layer normalization so that no expert dominates the gate through scale alone. DeepSEA[^deepsea] and DanQ trunks enter as frozen feature extractors with a lightweight linear probe (Linear plus LayerNorm) onto the same 32-dimensional space. DNABERT-6 tokenizes the sequence into overlapping 6-mers, so its embeddings are precomputed once and the gate trains identically whatever the expert type.
+
+<Sidenote>Optuna hyperparameter search was run for three representative factors (ARID3A, FOXM1, GATA3). The other four reuse the ARID3A configuration, since the experts are frozen and only the gate is selected.</Sidenote>
+
+Ablations on a convolutional reference pool support two choices. Changing the embedding size across $E \in \{16, 32, 64, 128\}$ moves the OOD mean by less than 0.01 AUC, so we keep $E = 32$ as a balance between capacity and cost. Freezing the experts matches fine-tuning to within bootstrap noise, and mixture training takes 5.5 s with 3,492 trainable parameters instead of 497.7 s with 11,047.
+
+### The gate
+
+With $N_e$ experts producing embeddings $e_i$, each embedding is first mapped by a per-expert linear projection to $h_i$. The concatenated embeddings $\mathbf{E} = [e_1, \dots, e_{N_e}]$ drive the gate, and the prediction is a gated sum:
+
+$$
+\alpha = \mathrm{softmax}\!\left(\mathbf{E}\,W_{\text{gate}} + b_{\text{gate}}\right), \qquad
+m = \sum_{i=1}^{N_e} \alpha_{:,i} \odot h_i, \qquad
+\hat{y} = \sigma\!\left(m\,W_{\text{class}} + b_{\text{class}}\right)
+$$
+
+The per-expert projections, the gate and the classifier are the only parameters learned at this stage. They are trained with SGD and Nesterov momentum (learning rate 0.01, momentum 0.98, batch size 256), with early stopping on in-distribution validation AUC. Two stabilizers keep the mixture from collapsing: each expert's embedding block is L2-normalized before the gate, and a gate-entropy term with coefficient $10^{-3}$ is added to the binary cross-entropy loss.
+
+### ShiftSmooth
+
+SmoothGrad[^smoothgrad] reduces attribution noise by averaging gradients over Gaussian-noised copies of an image. That does not carry over to DNA: a one-hot nucleotide plus Gaussian noise is no longer a nucleotide. What does vary in genomic data is the window, whose start and end are somewhat arbitrary within a few bases. ShiftSmooth therefore circularly shifts the input by $n$ positions, takes the gradient of the class score, shifts that gradient back into register and averages:
+
+$$
+\hat{A}_c(x) = \frac{1}{2N+1} \sum_{n=-N}^{N} \mathrm{roll}\!\big(A_c(\mathrm{roll}(x,\, n)),\, -n\big),
+\qquad A_c(x) = \frac{\partial S_c(x)}{\partial x}
+$$
+
+<Figure caption="How ShiftSmooth works: the input is shifted by a small set of integer translations, a gradient is computed for each shifted copy, the gradients are shifted back to the original nucleotide positions and then averaged. Every shifted input remains a valid one-hot sequence, so the average stays on the data simplex. Reproduced from <a href='https://doi.org/10.3390/math14142489'>Tripathi et al. (2026)</a>, <em>Mathematics</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>." wide={true}>
+<Image src={shiftsmoothImg} alt="Diagram: the sequence ATGCCT is shifted by -2, -1, 0, 1 and 2 positions; each shifted copy goes through a model pass and backpropagation to give a gradient, each gradient is shifted back by the same amount, and the shifted gradients are summed and divided by 2N plus 1." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+Every shifted copy is still a valid one-hot sequence, so, unlike Gaussian smoothing, the average stays on the data simplex. For the mixture, we take the derivative of the HetMoE output with respect to the single input tensor shared by all convolutional experts, so the map explains the whole model.
+
+<Sidenote>DNABERT-6 experts are not differentiable with respect to individual nucleotides, because they tokenize into k-mers. Gradient attribution therefore flows through the convolutional experts.</Sidenote>
+
+## Data and evaluation
+
+The experts and gate are trained on seven ENCODE ChIP-seq factors from seven different DNA-binding-domain (DBD) families: ARID3A, FOXM1, GATA3, JUND, MAX, GABPA and SP1. Four of the seven training factors, and most of the held-out factors, come from the K562 cell line, so that the train/test boundary is not also a cell-line boundary.[^paper]
+
+<Sidenote>ChIP-seq (chromatin immunoprecipitation followed by sequencing) maps where a protein binds the genome. Positive sequences in this study are 101 bp windows centered on ChIP-seq peak summits from the ENCODE project.</Sidenote>
+
+The held-out factors are split into three strata, each reported on its own:
+
+- **Within-family (17 factors).** Untrained members of the trained families, such as JUN and FOSL1 for JUND, MYC and USF1 for MAX, and GATA1 and GATA2 for GATA3. This stratum tests motif-family transfer.
+- **Cross-family (6 factors).** Sequence-specific factors from families absent in training: CTCF, STAT3, NRF1, HNF4A, TCF7L2 and ZBTB33.
+- **Non-motif (6 factors).** POLR2A, EP300, EZH2, TAF1, RBBP5 and SAP30. These are reported separately and never folded into the headline mean.
+
+<Sidenote>A DNA-binding-domain family groups factors by the structural domain they use to contact DNA (bZIP, ETS, forkhead, C2H2 zinc finger and so on). Members of one family tend to recognize related motifs.</Sidenote>
+
+The headline OOD number is the mean over the 23 motif-bearing factors (within- plus cross-family). Experts train on GC- and repeat-matched real genomic negatives sampled from hg19. A simple dinucleotide detector separates shuffled negatives from genomic ones at AUC 0.73 with matched GC content, which confirms that the shuffling artifact is learnable. Every model is scored on balanced curated test sets of 500 bound and 500 unbound sequences per factor, with deterministic inference and a B = 1000 paired bootstrap (the same resamples for all models), plus a one-way ANOVA as an omnibus check. Pool and gate settings are chosen on in-distribution mean AUC only, and the OOD strata are scored once.
+
+## Results
+
+<Stats items={[
+  { value: '0.881', label: 'In-distribution mean AUC, 7 training factors' },
+  { value: '0.821 ± 0.005', label: 'Motif-OOD AUC over 3 seeds (DNABERT-6: 0.799 ± 0.008)' },
+  { value: '13 of 23', label: 'Motif-bearing OOD factors where HetMoE beats DNABERT-6 (95% CI, canonical seed)' },
+  { value: '+0.073', label: 'AUC from gating over a static average of the same experts (canonical seed)' },
+]} />
+
+HetMoE has the highest in-distribution mean AUC (0.881) and the highest per-factor mean on all seven training factors, tying the fine-tuned DNABERT-6 on MAX. On the held-out factors it leads every motif-bearing stratum. On the separately reported non-motif stratum, which sits near a sequence-only ceiling, DNABERT-6 is the stronger model (0.756 vs 0.696).
+
+<Figure caption="Mean AUC per stratum on the canonical seed (paper Table 3). Baselines are mean-ensembled across the seven training factors. All experts are trained on GC-matched genomic negatives. Best value per column in bold.">
+
+| Model | In-dist. | Within-family | Cross-family | Non-motif | Motif-OOD |
+| --- | --- | --- | --- | --- | --- |
+| **HetMoE** | **0.881** | **0.846** | **0.775** | 0.696 | **0.827** |
+| DNABERT-6 (fine-tuned) | 0.818 | 0.816 | 0.753 | **0.756** | 0.800 |
+| DanQ | 0.827 | 0.805 | 0.746 | 0.702 | 0.789 |
+| DeepSEA | 0.805 | 0.792 | 0.724 | 0.693 | 0.774 |
+| Static average of pool | 0.796 | 0.770 | 0.707 | 0.675 | 0.754 |
+| Best single expert | 0.747 | 0.754 | 0.693 | 0.654 | 0.739 |
+
+</Figure>
+
+Against DNABERT-6, the per-factor paired bootstrap finds HetMoE significantly better on 13 of the 23 motif-bearing factors: 10 of 17 within-family (mean margin +0.029) and 3 of 6 cross-family (+0.022). The largest gains are on sequence-specific factors: FOXA2 (+0.143), FOXA1 (+0.127), CTCF (+0.125), FOSL1 (+0.101) and HNF4A (+0.100). On several zinc-finger factors (YY1, ZNF143, REST and ZBTB33), DNABERT-6 is stronger. Once the shuffle artifact is removed, these are the factors where genome-scale pretraining helps most.
+
+<Figure caption="Per-factor HetMoE minus DNABERT-6 ΔAUC with 95% paired-bootstrap confidence intervals for the 23 motif-bearing held-out factors, grouped by DNA-binding-domain family. The interval excludes zero in favor of HetMoE on 13 of the 23 factors (blue), with the largest gains on FOXA2, FOXA1, CTCF, FOSL1 and HNF4A. Reproduced from <a href='https://doi.org/10.3390/math14142489'>Tripathi et al. (2026)</a>, <em>Mathematics</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>." wide={true}>
+<Image src={forestImg} alt="Forest plot of HetMoE minus DNABERT-6 AUC difference for 23 held-out factors. Blue points with intervals above zero (significant) include FOSL1, JUN, ATF3, SPI1, ELF1, SP2, GATA1, GATA2, FOXA2, FOXA1, CTCF, STAT3 and HNF4A, with FOXA2 largest near 0.14. Grey points, which do not favor HetMoE, sit near zero for MYC, USF1 and ETS1 and below zero for MXI1, ZNF143, REST, YY1, NRF1, TCF7L2 and ZBTB33." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+### Across random seeds
+
+Each seed retrains every expert on the genomic negatives and reselects the configuration on in-distribution AUC. All three seeds select the same convolutional pool. The HetMoE margin over DNABERT-6 is positive in every seed (range +0.011 to +0.028), and HetMoE is also the more stable model (s.d. 0.005 vs 0.008).
+
+<Figure caption="Motif-bearing OOD AUC, mean over three genomic seeds (paper Figure 5). Error bars are omitted; standard deviations are listed next to each label. The axis starts at 0.70.">
+<BarChart
+  rows={[
+    { label: 'HetMoE', value: 0.821, series: 'HetMoE', note: '± 0.005' },
+    { label: 'DNABERT-6', value: 0.799, series: 'Baselines', note: '± 0.008' },
+    { label: 'DanQ', value: 0.782, series: 'Baselines', note: '± 0.006' },
+    { label: 'DeepSEA', value: 0.774, series: 'Baselines', note: '± 0.003' },
+  ]}
+  series={['HetMoE', 'Baselines']}
+  min={0.7}
+  max={0.85}
+  decimals={3}
+  mark="dot"
+  axisLabel="Motif-OOD mean AUC (3 seeds)"
+/>
+</Figure>
+
+### Gating versus pooling
+
+The pool ablation shows where the gain comes from. A gate over the seven ConvNet experts alone generalizes poorly (0.673). Adding the DeepSEA and DanQ trunks lifts the motif-OOD mean to 0.827, and in-distribution AUC selects that configuration. Adding fine-tuned DNABERT-6 experts as well (the full 28-expert pool) does not raise the mean any further (0.818), so the selected pool contains no genomic language model. Removing the two gate stabilizers lowers performance and collapses the gate's mean entropy from 2.87 to 0.98 nats, concentrating it on a handful of experts. In the selected pool, the gate routes inputs in a factor-dependent way rather than collapsing onto one expert.
+
+<Figure caption="Motif-bearing OOD mean AUC by expert pool, under the fair-negative protocol (paper Table 6). The note under each label gives the number of experts. The axis starts at 0.60.">
+<BarChart
+  rows={[
+    { label: 'ConvNet only', value: 0.673, note: '7 experts' },
+    { label: 'DNABERT-6 only', value: 0.725, note: '7 experts' },
+    { label: 'ConvNet + DNABERT-6', value: 0.743, note: '14 experts' },
+    { label: 'ConvNet + DeepSEA + DanQ (selected)', value: 0.827, note: '21 experts' },
+    { label: 'Full pool, with DNABERT-6', value: 0.818, note: '28 experts' },
+    { label: 'Full pool, no stabilizers', value: 0.800, note: '28 experts' },
+  ]}
+  min={0.6}
+  max={0.85}
+  decimals={3}
+  mark="dot"
+  axisLabel="Motif-OOD mean AUC"
+/>
+</Figure>
+
+<Figure caption="Mean gate weight for each expert in the selected pool (columns: the ConvNet, DeepSEA and DanQ experts for the seven training factors, grouped by backbone) across representative held-out factors (rows). The gate routes inputs in a factor-dependent way rather than collapsing onto a single expert. Reproduced from <a href='https://doi.org/10.3390/math14142489'>Tripathi et al. (2026)</a>, <em>Mathematics</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>." wide={true}>
+<Image src={gateImg} alt="Heatmap of mean gate weight, 0 to about 0.14, with rows JUN, MYC, ELF1, SP2, GATA2 and CTCF and 21 columns for the ARID3A, FOXM1, GATA3, JUND, MAX, GABPA and SP1 experts of each of ConvNet, DeepSEA and DanQ. Weight concentrates on different experts per row, for example DeepSEA-JUND for JUN, ConvNet-MAX for SP2, DanQ-GABPA for ELF1 and DanQ-FOXM1 for CTCF." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+<Note title="Negatives change the story" variant="warning">
+
+When the experts are instead trained against dinucleotide-shuffled negatives, the apparent motif-OOD margin over DNABERT-6 grows to +0.066 (mean 0.864, superior on 22 of 23 factors). Under fair GC-matched negatives it is +0.027 (mean 0.827, superior on 13 of 23). The common shuffle protocol materially overstates the comparison, so we report the fair-negative result as the headline.
+
+</Note>
+
+### ShiftSmooth in practice
+
+We compared ShiftSmooth with Vanilla Gradient, gradient × input and SmoothGrad on 50 positive sequences per training factor, with and without the simplex gradient correction of Majdandzic et al.[^majdandzic], for both the mixture and the individual experts. Faithfulness is rank correlation with in-silico mutagenesis; stability is attribution correlation under a small input perturbation.
+
+<Sidenote>In-silico mutagenesis mutates each position and measures the change in prediction. It is slow, but it is the usual faithfulness reference in genomics.</Sidenote>
+
+<Figure caption="Attribution faithfulness and stability (paper Table 7). <em>+corr</em> applies the simplex gradient correction. Higher is better for both; bold marks the highest stability per model class.">
+
+| Model | Method | Faithfulness | Stability |
+| --- | --- | --- | --- |
+| MoE | ShiftSmooth +corr | 0.75 | **0.96** |
+| MoE | SmoothGrad +corr | 0.76 | 0.92 |
+| MoE | Vanilla Gradient +corr | 0.75 | 0.95 |
+| MoE | ShiftSmooth | 0.72 | **0.96** |
+| MoE | SmoothGrad | 0.75 | 0.92 |
+| Experts | ShiftSmooth +corr | 0.78 | **0.95** |
+| Experts | SmoothGrad +corr | 0.78 | 0.91 |
+| Experts | Vanilla Gradient +corr | 0.78 | **0.95** |
+| Experts | ShiftSmooth | 0.72 | **0.95** |
+| Experts | SmoothGrad | 0.73 | 0.91 |
+
+</Figure>
+
+ShiftSmooth with the correction matches or exceeds every other method on stability for both model classes (0.96 for the mixture, 0.95 for the experts), above SmoothGrad (0.92 and 0.91). Faithfulness is comparable across the corrected methods, and the simplex correction, not the smoothing kernel, accounts for most of the faithfulness gain. On a GATA3-positive sequence, Vanilla Gradient on the GATA3 expert gives the leading G of the GATAA motif almost no importance, while ShiftSmooth credits it. For the mixture, Vanilla Gradient gives the second A a negative score, which ShiftSmooth shows to be a window artifact: the same A scores positively once the sequence is shifted slightly.
+
+<Figure caption="ShiftSmooth attribution for a GATA3-positive sequence (left) and a random negative (right), zoomed to the motif region: (A) the input one-hot sequence, (B) Vanilla Gradient and (C) ShiftSmooth for the GATA3 ConvNet expert, (D) Vanilla Gradient and (E) ShiftSmooth for the MoE. The green box marks the GATAA motif and the blue box its reverse complement TTATC; letter height encodes per-nucleotide attribution in arbitrary units. Reproduced from <a href='https://doi.org/10.3390/math14142489'>Tripathi et al. (2026)</a>, <em>Mathematics</em>, <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>." wide={true}>
+<Image src={attributionImg} alt="Five rows of sequence-logo attribution maps in two columns. Left, a GATA3-positive sequence with a green box around GATAA and a blue box around TTATC; in all four attribution rows the tallest letters fall inside the two boxes, most strongly the GATAA box for the MoE rows. Right, a random negative sequence whose attributions are scattered across positions with no clear motif." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+## What we learned
+
+<Note title="Key takeaway" variant="info">
+
+The gain comes from per-input gating over complementary convolutional backbones, not from averaging more models or adding a genomic language model. The configuration chosen on in-distribution data alone contains no language model and still edges out a fine-tuned DNABERT-6 on the held-out motif-bearing mean, by a margin that is consistent across seeds but modest.
+
+</Note>
+
+The evaluation protocol mattered as much as the architecture. An earlier preprint of this work[^preprint] gated three CNN experts and tested on six randomly selected OOD factors: BCLAF1, CTCF, POLR2A, RBBP5, SAP30 and STAT3. That set mixed two sequence-specific factors (CTCF, STAT3) with four lacking an intrinsic motif, shared no DBD family with training, and let CTCF dominate the pooled mean. For the journal version we moved to seven training factors, family-stratified strata and genomic negatives.
+
+The paper also lists its limitations:
+
+- **Generalization depends on motif family.** Transfer is most reliable within a trained family (0.846). It is harder across families (0.775) and near a sequence-only ceiling for non-motif factors (0.696).
+- **Cell-line and assay confounds.** Anchoring to K562 reduces these but cannot fully exclude them.
+- **Metrics and prevalence.** AUC on a balanced 500/500 set measures ranking. It does not reflect deployment precision, where binding sites are rare.
+- **Selection and scale.** The selected configuration is the best of a small screened set and may be slightly optimistic. The study covers 7 training and 29 held-out factors over three seeds.
+- **ShiftSmooth is not a faithfulness oracle.** Its advantage lies in stability and on-simplex validity, not in beating corrected gradient baselines on faithfulness.
+
+## Where it goes next
+
+A sequence-only predictor covers one regulatory modality. The paper's stated next step is to fold explainable per-modality models like HetMoE into multimodal oncology pipelines that combine genomic, imaging and clinical data, for example through foundation-model embeddings ([HONeYBEE](/blog/honeybee/))[^honeybee] or multi-omics networks ([SeNMo](/blog/senmo/)).[^senmo] The same embedding gate could then weight data sources the way it now weights experts.
+
+## Resources
+
+- **Paper:** open access in *Mathematics* (CC BY).[^paper]
+- **Code:** the `tfbs` library and the experiment command-line tools.[^code]
+- **Data:** the processed ENCODE ChIP-seq sequences on Hugging Face (1,014 files).[^data]
+- **Weights:** 7 ConvNet experts plus the DeepSEA and DanQ probes for seeds 0, 1 and 42.[^weights]
+
+From the repository README (run from the repository root):
+
+```bash
+git clone https://github.com/lab-rasool/TFBS.git && cd TFBS
+pip install -e .   # after installing the CUDA build of torch (see README)
+hf download Lab-Rasool/ENCODE-TFBS --local-dir models   # checkpoints; ChIP-seq data go under data/
+
+# HetMoE
+python -m experiments.hetmoe.cache_embeddings --seed 42 --backbones ConvNet,DeepSEA,DanQ,DNABERT6
+python -m experiments.hetmoe.sweep --seed 42
+python -m experiments.hetmoe.aggregate_seeds
+
+# ShiftSmooth attribution evaluation
+python -m experiments.attribution.shiftsmooth_eval --n_seqs 60
+```
+
+[^paper]: Tripathi A, Nielsen IE, Umer M, Ramachandran RP, Rasool G. Robust Transcription Factor Binding Site Prediction and Explainability Using a Heterogeneous Mixture of Experts Architecture. *Mathematics*. 2026;14(14):2489. [doi:10.3390/math14142489](https://doi.org/10.3390/math14142489)
+[^preprint]: Tripathi A, Nielsen IE, Umer M, Ramachandran RP, Rasool G. Explainable AI in Genomics: Transcription Factor Binding Site Prediction with Mixture of Experts. arXiv:2507.09754, 2025. [arxiv.org/abs/2507.09754](https://arxiv.org/abs/2507.09754)
+[^code]: lab-rasool/TFBS: code, training and evaluation pipeline. [github.com/lab-rasool/TFBS](https://github.com/lab-rasool/TFBS)
+[^data]: Lab-Rasool/ENCODE-TFBS dataset (ENCODE ChIP-seq sequences). [huggingface.co/datasets/Lab-Rasool/ENCODE-TFBS](https://huggingface.co/datasets/Lab-Rasool/ENCODE-TFBS)
+[^weights]: Lab-Rasool/ENCODE-TFBS model checkpoints. [huggingface.co/Lab-Rasool/ENCODE-TFBS](https://huggingface.co/Lab-Rasool/ENCODE-TFBS)
+[^deepbind]: Alipanahi B, Delong A, Weirauch MT, Frey BJ. Predicting the sequence specificities of DNA- and RNA-binding proteins by deep learning. *Nat Biotechnol*. 2015;33:831-838. [doi:10.1038/nbt.3300](https://doi.org/10.1038/nbt.3300)
+[^deepsea]: Zhou J, Troyanskaya OG. Predicting effects of noncoding variants with deep learning-based sequence model. *Nat Methods*. 2015;12:931-934. [doi:10.1038/nmeth.3547](https://doi.org/10.1038/nmeth.3547)
+[^dnabert]: Ji Y, Zhou Z, Liu H, Davuluri RV. DNABERT: pre-trained Bidirectional Encoder Representations from Transformers model for DNA-language in genome. *Bioinformatics*. 2021;37:2112-2120. [doi:10.1093/bioinformatics/btab083](https://doi.org/10.1093/bioinformatics/btab083)
+[^tourne]: Tourne N, De Waele G, Vermeirssen V, Waegeman W. How negative sampling shapes the performance of transcription factor binding site prediction models. *Bioinformatics*. 2026;42:btag048. [doi:10.1093/bioinformatics/btag048](https://doi.org/10.1093/bioinformatics/btag048)
+[^smoothgrad]: Smilkov D, Thorat N, Kim B, Viégas F, Wattenberg M. SmoothGrad: removing noise by adding noise. arXiv:1706.03825, 2017. [arxiv.org/abs/1706.03825](https://arxiv.org/abs/1706.03825)
+[^majdandzic]: Majdandzic A, Rajesh C, Koo PK. Correcting gradient-based interpretations of deep neural networks for genomics. *Genome Biol*. 2023;24:109. [doi:10.1186/s13059-023-02956-3](https://doi.org/10.1186/s13059-023-02956-3)
+[^honeybee]: Tripathi A, Waqas A, Schabath MB, Yilmaz Y, Rasool G. HONeYBEE: enabling scalable multimodal AI in oncology through foundation model-driven embeddings. *npj Digit Med*. 2025;8:622. [doi:10.1038/s41746-025-02003-4](https://doi.org/10.1038/s41746-025-02003-4)
+[^senmo]: Waqas A, Tripathi A, Ahmed S, et al. Self-Normalizing Multi-Omics Neural Network for Pan-Cancer Prognostication. *Int J Mol Sci*. 2025;26:7358. [doi:10.3390/ijms26157358](https://doi.org/10.3390/ijms26157358)

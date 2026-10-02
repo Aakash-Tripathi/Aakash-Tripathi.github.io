@@ -1,0 +1,308 @@
+---
+layout: ../../layouts/ArticleLayout.astro
+title: "HONeYBEE: foundation model embeddings for multimodal oncology data"
+short: "HONeYBEE"
+subtitle: "A publicly released framework that turns clinical text, slides, radiology and omics into patient embeddings, evaluated on 11,428 TCGA patients."
+description: "HONeYBEE converts clinical text, pathology slides, radiology and molecular data into patient embeddings; tested on 11,428 TCGA patients across 33 cancer types."
+published: "2025-10-23"
+venue: "npj Digital Medicine"
+role: "Led development; co-first and corresponding author"
+doi: "10.1038/s41746-025-02003-4"
+paperTitle: "HONeYBEE: enabling scalable multimodal AI in oncology through foundation model-driven embeddings"
+authors: ["Aakash Tripathi", "Asim Waqas", "Matthew B. Schabath", "Yasin Yilmaz", "Ghulam Rasool"]
+affiliations: ["Department of Machine Learning, Moffitt Cancer Center & Research Institute", "Department of Electrical Engineering, University of South Florida", "Department of Cancer Epidemiology, Moffitt Cancer Center & Research Institute"]
+links: [{label: "Paper", url: "https://www.nature.com/articles/s41746-025-02003-4"}, {label: "Code", url: "https://github.com/lab-rasool/HoneyBee"}, {label: "Dataset", url: "https://huggingface.co/datasets/Lab-Rasool/TCGA"}, {label: "Docs", url: "https://lab-rasool.github.io/HoneyBee/"}, {label: "Preprint", url: "https://arxiv.org/abs/2405.07460"}]
+tags: ["multimodal", "foundation models", "embeddings", "survival analysis", "oncology"]
+order: 1
+citation: "Tripathi A, Waqas A, Schabath MB, Yilmaz Y, Rasool G. HONeYBEE: enabling scalable multimodal AI in oncology through foundation model-driven embeddings. NPJ Digit Med. 2025;8:622. doi:10.1038/s41746-025-02003-4"
+bibtex: |
+  @article{tripathi2025honeybee,
+    title   = {{HONeYBEE}: enabling scalable multimodal {AI} in oncology through foundation model-driven embeddings},
+    author  = {Tripathi, Aakash and Waqas, Asim and Schabath, Matthew B. and Yilmaz, Yasin and Rasool, Ghulam},
+    journal = {npj Digital Medicine},
+    year    = {2025},
+    volume  = {8},
+    pages   = {622},
+    doi     = {10.1038/s41746-025-02003-4}
+  }
+coverAlt: "Multi-panel diagram of the HONeYBEE framework. A multimodal dataset store feeds four processing rows: histopathology (WSI loading, stain processing, tissue detection, patches), molecular (protein expression, DNA methylation, gene expression, miRNA expression, DNA mutation, then normalization and denoising), clinical (reports and EHR extracted into tokenized text chunks) and radiology (3D volumes sliced into patches). Each row ends in its own encoder, and the resulting embeddings go to an embedding dataset with public hosting. A side panel lists downstream tasks: cancer classification, survival prediction and patient retrieval, plus future treatment recommendation and biomarker discovery."
+coverCaption: |-
+  Overview of HONeYBEE. Data from public repositories such as the GDC, PDC, IDC and TCIA, or from institutional sources, pass through modality-specific pipelines for (A) histopathology, (B) molecular data, (C) clinical text and (D) radiology; (E) foundation models turn each into fixed-length embeddings that are released publicly, and (F) the embeddings feed downstream tasks such as cancer classification, survival prediction and patient retrieval. Reproduced from <a href='https://doi.org/10.1038/s41746-025-02003-4'>Tripathi et al. (2025)</a>, <em>npj Digital Medicine</em>, <a href='https://creativecommons.org/licenses/by-nc-nd/4.0/'>CC BY-NC-ND 4.0</a>.
+---
+
+import Sidenote from '../../components/article/Sidenote.astro';
+import Note from '../../components/article/Note.astro';
+import Figure from '../../components/article/Figure.astro';
+import BarChart from '../../components/article/BarChart.astro';
+import Stats from '../../components/article/Stats.astro';
+
+import { Image } from 'astro:assets';
+import imagingPipelinesImg from '../../assets/blog/honeybee/pathology-radiology-pipelines.png';
+import molecularClinicalImg from '../../assets/blog/honeybee/molecular-clinical-pipelines.png';
+import clinicalTsneImg from '../../assets/blog/honeybee/clinical-text-tsne.png';
+import reportTsneImg from '../../assets/blog/honeybee/pathology-report-tsne.png';
+
+A cancer patient's record is spread across very different kinds of data: structured fields and free-text notes in the health record, pathology and radiology reports, gigapixel whole-slide images (WSIs), CT, MRI and PET volumes, and molecular profiles. Foundation models now exist for most of these modalities, but in practice each one is processed in its own pipeline, with its own file formats and its own code. Combining them for a single patient-level analysis is mostly plumbing, and that plumbing is often rebuilt from project to project.
+
+HONeYBEE (Harmonized ONcologY Biomedical Embedding Encoder) is our attempt to make that plumbing reusable. It is an open-source framework that takes each modality through a standard preprocessing pipeline, runs a domain-specific foundation model to produce a fixed-length embedding, and fuses the per-modality embeddings into one patient-level representation that can be used for classification, retrieval, clustering and survival analysis.[^paper]
+
+We evaluated it on 11,428 patients across 33 cancer types from The Cancer Genome Atlas (TCGA). Clinical-text embeddings were the strongest single modality (98.54% cancer-type classification accuracy, 0.964 precision@10 in patient retrieval), and fusing modalities improved overall-survival prediction beyond clinical features alone for specific cancer types.
+
+<Sidenote>I led development of the framework. Asim Waqas and I share first authorship of the npj Digital Medicine paper, and I am its corresponding author. An earlier version appeared on arXiv in May 2024 under the name HoneyBee.[^preprint]</Sidenote>
+
+## Why the data stays siloed
+
+Oncology data is abundant but fragmented. Structured variables, clinical narratives, images and molecular profiles are usually processed separately, and single-modality foundation models are typically applied in one- or two-modality workflows, so complementary information across modalities goes unused.
+
+The engineering problem is just as real. Multimodal projects stitch together separate tools (OHDSI for structured clinical data, PyDicom for radiology, OpenSlide and TIAToolbox for pathology), each with its own API and metadata conventions. Missing data adds to the difficulty: coverage varies from patient to patient, and requiring complete cases discards much of the cohort.
+
+Our hypothesis was that fusing foundation-model embeddings from several modalities yields richer patient representations, particularly where clinical documentation is incomplete or less structured, an approach orthogonal to scaling up a single model.
+
+## What HONeYBEE does
+
+HONeYBEE handles five data types: structured and unstructured clinical data, pathology reports, WSIs, radiology images and molecular profiles. Each goes through its own pipeline and ends as an embedding; the embeddings are then fused and stored in a format that standard ML tooling can read directly. The framework works with PyTorch, Hugging Face and FAISS, and any foundation model with weights on Hugging Face can be swapped in for a given modality.
+
+Raw data for the TCGA study was pulled with MINDS, our earlier framework for building machine-learning-ready multimodal oncology datasets.[^minds] The generated embeddings are public on Hugging Face, so downstream experiments can start from the embeddings rather than from raw data.[^data]
+
+## How it works
+
+### Clinical text and reports
+
+Clinical documents arrive as PDFs, scanned images or EHR exports. Scans go through Tesseract OCR with medical dictionaries, and structured EHR tables become key–value text that a language model can read alongside narrative notes. Long documents are split with sliding windows (typically 10–20% overlap) or section-aware segmentation, and extracted entities can be mapped to SNOMED CT, RxNorm, LOINC and ICD-O-3.
+
+<Sidenote>The paper's example of the key–value format: `blood_pressure: 120/80 mmHg` and `white_blood_cells: 7.2K/μL`.</Sidenote>
+
+For the primary analyses we embedded clinical text and pathology reports with GatorTron, chosen for its clinical pretraining. The framework also supports Qwen3, Med-Gemma and Llama-3.2, which we compare below.
+
+### Pathology slides
+
+Whole-slide images bring their own computational problems: gigapixel size, multi-resolution pyramids and vendor-specific formats. HONeYBEE loads them through CuImage, with GPU-accelerated I/O for Aperio SVS, Philips TIFF and generic tiled TIFF files, and reads regions on demand from the pyramid.
+
+<Figure caption="The imaging pipelines. (A) A digitized slide is stain-separated and normalized (Reinhard, Vahadane or Macenko), a pretrained detector labels regions as slide background, tissue or noise, grid patches are extracted from valid tissue, and a pretrained model embeds them (UNI in our TCGA experiments, with patch embeddings mean-pooled across all tissue patches into one patient-level vector), with embeddings stored alongside slide metadata. (B) Radiology images in DICOM or NIfTI are resampled, denoised, segmented and intensity-normalized before embedding. Reproduced from <a href='https://doi.org/10.1038/s41746-025-02003-4'>Tripathi et al. (2025)</a>, <em>npj Digital Medicine</em>, <a href='https://creativecommons.org/licenses/by-nc-nd/4.0/'>CC BY-NC-ND 4.0</a>." wide={true}>
+<Image src={imagingPipelinesImg} alt="Two-panel diagram. Top: a whole-slide image of stained tissue, its hematoxylin, eosin and DAB stain channels, a source tile normalized to a target with Reinhard, Vahadane and Macenko methods, a color-coded tissue-detection map marking slide, tissue and noise, and a grid of patches over the tissue feeding an embedding model and a metadata database. Bottom: radiology steps from scanner acquisition through spatial resampling, denoising, lung segmentation and intensity normalization to an embedding model, with notes on CT, MRI and PET handling at each step." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+GPU stain normalization gave an average 8–12× speedup over CPU alternatives on typical hardware, and the deep-learning tissue detector also flags artifacts such as pen markings. UNI2-h and Virchow2 are supported as alternatives to UNI; the supplementary material analyzes how stain normalization affects each.
+
+<Sidenote>Mean pooling is a deliberately simple aggregation. The paper notes it may miss histopathological structure that multiple-instance learning would capture, and treats it as a standardized baseline.</Sidenote>
+
+### Radiology and molecular data
+
+Radiology images are read from DICOM or NIfTI with acquisition metadata preserved, then resampled, denoised, segmented and intensity-normalized before embedding with RadImageNet, a CNN pretrained on over four million CT, MRI and PET images.
+
+Molecular data (gene expression, DNA methylation, somatic mutations, miRNA and protein expression) follows the preprocessing of SeNMo, a self-normalizing multi-omics encoder from our group, and is embedded with it.[^senmo] For patients with several molecular profiles, features are aggregated to the patient level before embedding.
+
+<Figure caption="The molecular and clinical pipelines. (A) Multi-omics data (protein expression, DNA methylation, gene expression, DNA mutation and miRNA expression) are cleaned of missing values, constant, duplicate, low-expression and collinear features, unified within and then across modalities, combined with clinical features and passed through a molecular encoder. (B) Clinical documents, including EHRs, PDFs and scanned reports, go through entity extraction and OCR, tokenization and embedding with any Hugging Face language model, with support for concept mapping such as ICD and SNOMED CT. Reproduced from <a href='https://doi.org/10.1038/s41746-025-02003-4'>Tripathi et al. (2025)</a>, <em>npj Digital Medicine</em>, <a href='https://creativecommons.org/licenses/by-nc-nd/4.0/'>CC BY-NC-ND 4.0</a>." wide={true}>
+<Image src={molecularClinicalImg} alt="Two-panel diagram. Top: five molecular data types (protein expression, DNA methylation, gene expression, DNA mutation, miRNA expression) pass through preprocessing steps (remove NaNs, drop constant features, remove low-expression genes, handle missing features, remove collinear and duplicate features), a union of features within and across modalities, and a molecular encoder that combines them with clinical features to output embeddings and predictions. Bottom: clinical input documents are extracted with an OCR engine and an LLM parser, tokenized, and embedded by any Hugging Face model and tokenizer, with a header listing ontology mapping, accuracy metrics, temporal extraction, entity types and entity recognition." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+### Fusing modalities
+
+Patients rarely have every modality, so the fusion step works over whatever is available for each patient. For a patient with $M$ available modality embeddings $\mathbf{e}_1, \dots, \mathbf{e}_M$, the three strategies are (the Kronecker product written for one pair of modalities $a$ and $b$):
+
+$$
+\mathbf{z}_{\text{concat}} = [\,\mathbf{e}_1;\ \mathbf{e}_2;\ \dots;\ \mathbf{e}_M\,], \qquad
+\mathbf{z}_{\text{mean}} = \frac{1}{M}\sum_{m=1}^{M} \operatorname{pad}(\mathbf{e}_m), \qquad
+\mathbf{z}_{\otimes} = \mathbf{e}_a \otimes \mathbf{e}_b
+$$
+
+Concatenation keeps modality-specific information intact. Mean pooling first pads embeddings to a common dimension and then averages them. The Kronecker product captures pairwise interactions between modalities.
+
+<Sidenote>For two embeddings of dimension $d_a$ and $d_b$, the Kronecker product has $d_a d_b$ entries, compared with $d_a + d_b$ for concatenation.</Sidenote>
+
+## Data and evaluation
+
+All experiments used TCGA, where coverage varies widely by modality, as it does in real-world data.
+
+<Stats items={[
+  {value: '11,428', label: 'TCGA patients'},
+  {value: '33', label: 'cancer types'},
+  {value: '5', label: 'data modalities'},
+  {value: '99.97%', label: 'patients with two or more modalities (11,424)'}
+]} />
+
+| Modality | Coverage |
+| --- | --- |
+| Clinical text | 11,428 patients |
+| Molecular profiles | 13,804 samples from 10,938 patients |
+| Pathology reports | 11,108 patients |
+| Whole-slide images | 8,060 patients |
+| Radiology images | 1,149 patients |
+
+We evaluated four tasks:
+
+- **Clustering.** Cancer-type separability of each embedding space, measured with normalized and adjusted mutual information (NMI, AMI).
+- **Classification.** Random forests with 100 estimators, an 80/20 stratified split, repeated over 10 random seeds.
+- **Retrieval.** Nearest-neighbor search with FAISS, scored by precision@k, $\text{P@}k = \frac{1}{k}\sum_{j=1}^{k}\mathbf{1}[\,y_{(j)} = y_q\,]$, the fraction of the $k$ nearest patients that share the query's cancer type.
+- **Survival.** Separate models per cancer type (Cox proportional hazards, random survival forests and DeepSurv) with 5-fold cross-validation stratified on outcome and censoring. Small cohorts with similar cancers were merged, such as colon and rectal adenocarcinoma.
+
+<Sidenote>The concordance index (C-index) measures how often a model ranks pairs of patients in the same order as their observed survival. A value of 0.5 means chance-level ranking; 1.0 means perfect ranking.</Sidenote>
+
+## Results
+
+### Classification and clustering
+
+Clinical embeddings dominated the single-modality results, and concatenation and Kronecker fusion performed on par with them.
+
+<Figure caption="Cancer-type classification accuracy across 33 TCGA cancer types (random forest, mean of 10 runs). Fusion strategies combine all available modalities. Values from Table 3 of the paper.">
+<BarChart
+  rows={[
+    {label: 'Clinical', value: 98.54, series: 'Single modality'},
+    {label: 'Pathology reports', value: 78.67, series: 'Single modality'},
+    {label: 'Molecular', value: 56.73, series: 'Single modality'},
+    {label: 'Radiology', value: 47.78, series: 'Single modality'},
+    {label: 'WSI', value: 28.41, series: 'Single modality'},
+    {label: 'Concatenation', value: 98.72, series: 'Multimodal fusion'},
+    {label: 'Kronecker product', value: 98.50, series: 'Multimodal fusion'},
+    {label: 'Mean pooling', value: 91.97, series: 'Multimodal fusion'}
+  ]}
+  series={['Single modality', 'Multimodal fusion']}
+  min={0}
+  max={100}
+  decimals={2}
+  unit="%"
+  axisLabel="Accuracy (%)"
+/>
+</Figure>
+
+Concatenation reached 98.72 ± 0.21% accuracy against 98.54 ± 0.32% for clinical embeddings alone, a marginal gain within one standard deviation, and run-to-run standard deviations stayed under 1% for every method except radiology (± 3.51%). Clustering told a slightly different story: clinical embeddings had the best cancer-type separation (NMI 0.7448, AMI 0.702), while the best fusion strategy, concatenation, reached NMI 0.4440 and AMI 0.347. All three fusion strategies still clustered better than the molecular, radiology or WSI embeddings on their own.
+
+### Survival prediction
+
+On breast (BRCA) and bladder (BLCA) cancer, we compared HONeYBEE embeddings with published multimodal survival models.
+
+<Figure caption="Overall-survival C-index (mean) on TCGA-BRCA. Published baselines versus survival models trained on HONeYBEE embeddings; for each HONeYBEE input the best of the three survival models (Cox, RSF, DeepSurv) is shown, plus Cox for clinical. Values from Table 2 of the paper.">
+<BarChart
+  rows={[
+    {label: 'SurvPath', value: 0.655, series: 'Published baselines'},
+    {label: 'MCAT', value: 0.652, series: 'Published baselines'},
+    {label: 'Porpoise', value: 0.652, series: 'Published baselines'},
+    {label: 'ABMIL', value: 0.615, series: 'Published baselines'},
+    {label: 'MOTCat', value: 0.600, series: 'Published baselines'},
+    {label: 'Clinical', value: 0.928, series: 'HONeYBEE embeddings', note: 'DeepSurv'},
+    {label: 'Clinical', value: 0.920, series: 'HONeYBEE embeddings', note: 'Cox'},
+    {label: 'Concatenation', value: 0.847, series: 'HONeYBEE embeddings', note: 'DeepSurv'},
+    {label: 'Kronecker product', value: 0.758, series: 'HONeYBEE embeddings', note: 'DeepSurv'},
+    {label: 'Mean pooling', value: 0.666, series: 'HONeYBEE embeddings', note: 'DeepSurv'},
+    {label: 'Molecular', value: 0.525, series: 'HONeYBEE embeddings', note: 'Cox'},
+    {label: 'Pathology reports', value: 0.511, series: 'HONeYBEE embeddings', note: 'RSF'},
+    {label: 'WSI', value: 0.491, series: 'HONeYBEE embeddings', note: 'RSF'}
+  ]}
+  series={['Published baselines', 'HONeYBEE embeddings']}
+  min={0.4}
+  max={1}
+  decimals={3}
+  mark="dot"
+  baseline={{value: 0.5, label: 'chance'}}
+  axisLabel="C-index"
+/>
+</Figure>
+
+The baselines ranged from 0.566 to 0.655 across the two cancers. Clinical embeddings reached 0.920 (Cox) and 0.928 (DeepSurv) on BRCA, and 0.823 and 0.842 on BLCA. The same chart shows that the advantage rests on the clinical text: on BRCA, none of the three survival models trained on WSI, molecular or pathology-report embeddings alone exceeded 0.525, close to chance.
+
+Across all 33 cancer types, clinical embeddings exceeded a C-index of 0.80 for 27, with examples such as TCGA-PCPG (0.996 ± 0.007) and TCGA-THCA (0.985 ± 0.003). Some cancers behaved differently. Molecular embeddings were best for kidney chromophobe (TCGA-KICH, 0.725 ± 0.173), and for some cancers fusion beat clinical features alone. The paper's examples:
+
+| Cancer type | Clinical only | Multimodal fusion |
+| --- | --- | --- |
+| TCGA-UCS | 0.794 ± 0.101 | 0.836 ± 0.070 |
+| TCGA-UVM | 0.844 ± 0.042 | 0.860 ± 0.084 |
+| TCGA-THYM | 0.978 ± 0.032 | 0.983 ± 0.033 |
+
+### Patient retrieval
+
+For retrieval, fusion hurt. Clinical embeddings reached precision@10 of 0.964, with only 3.6% of queries failing to retrieve a same-type patient in the top 10. Concatenation, the best fusion strategy, reached 0.461, and WSI embeddings 0.143 (85.7% failures). Our reading is that mixing weaker modalities into the vector diluted the clinical signal that nearest-neighbor search depends on.
+
+The most frequent confusions in clinical retrieval were between related cancers: rectal retrieved as colon adenocarcinoma (562 cases), lung adenocarcinoma as squamous cell carcinoma (480) and the reverse (401).
+
+### Which language model?
+
+Because clinical text carried so much of the signal, we also compared four language models as text encoders. GatorTron and Med-Gemma are medical models; Qwen3 and Llama-3.2 are general-purpose. Accuracies are random-forest means over 10 runs; the fine-tuned column uses a neural network classifier.
+
+| Model | Clinical accuracy | Clinical P@10 | Pathology-report accuracy | Pathology-report accuracy, fine-tuned |
+| --- | --- | --- | --- | --- |
+| GatorTron | 98.66% | 0.964 | 78.41% | 91.07% |
+| Qwen3 | 99.95% | 0.996 | 84.90% | 92.73% |
+| Med-Gemma | 99.52% | 0.955 | 84.05% | 94.29% |
+| Llama-3.2 | 99.49% | 0.965 | 82.45% | 92.96% |
+
+<Figure caption="t-SNE projections of clinical-text embeddings from (A) GatorTron, (B) Qwen3, (C) Med-Gemma and (D) Llama-3.2. Each point is a patient, colored and shaped by one of 33 TCGA cancer types. Qwen3 gives the clearest clusters (AMI 0.79, NMI 0.82), followed by GatorTron (AMI 0.71, NMI 0.75), while Med-Gemma (AMI 0.59) and Llama-3.2 (AMI 0.60) cluster moderately. Reproduced from <a href='https://doi.org/10.1038/s41746-025-02003-4'>Tripathi et al. (2025)</a>, <em>npj Digital Medicine</em>, <a href='https://creativecommons.org/licenses/by-nc-nd/4.0/'>CC BY-NC-ND 4.0</a>." wide={true}>
+<Image src={clinicalTsneImg} alt="Four t-SNE scatter plots labeled A to D, one per language model, with thousands of patient points colored and shaped by 33 TCGA cancer types (legend from ACC to UVM along the bottom). Most cancer types form compact, well-separated clusters, most cleanly in panel B (Qwen3)." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+The general-purpose Qwen3 gave the best clinical-text embeddings, with the highest clustering scores (AMI 0.79, NMI 0.82), accuracy and retrieval precision. Pathology reports were harder for every model. Fine-tuning with a small neural network classifier raised pathology-report accuracy by 7.8 to 12.7 percentage points, and AMI rose sharply in the fine-tuned embedding spaces (for example, 0.35 to 0.91 for GatorTron and 0.26 to 0.93 for Med-Gemma). For survival, average clinical-text C-indices across the 33 cancer types were above 0.84 for all four models; pathology-report embeddings stayed around 0.58.
+
+<Figure caption="t-SNE projections of pathology-report embeddings from four language models, original (left) and fine-tuned (right), with each patient colored by TCGA cancer type. Fine-tuning separates the cancer types much more cleanly, raising AMI from 0.35 to 0.91 for GatorTron, 0.39 to 0.93 for Qwen3, 0.26 to 0.93 for Med-Gemma and 0.32 to 0.93 for Llama. Reproduced from <a href='https://doi.org/10.1038/s41746-025-02003-4'>Tripathi et al. (2025)</a>, <em>npj Digital Medicine</em>, <a href='https://creativecommons.org/licenses/by-nc-nd/4.0/'>CC BY-NC-ND 4.0</a>.">
+<Image src={reportTsneImg} alt="Eight t-SNE scatter plots in four rows (GatorTron, Qwen, Med-Gemma, Llama-3.2-1B) and two columns, with a legend of 33 TCGA cancer types on the right. Points in the left column overlap heavily across cancer types; in the right column they form distinct, separated clusters." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 700px, 100vw" />
+</Figure>
+
+<Note title="Key takeaway" variant="info">
+
+In TCGA, expert-curated clinical text is the strongest single signal for cancer type, retrieval and survival. Fusion beats the weaker modalities in clustering and classification, concatenation slightly improves classification over clinical text, and fusion improves survival prediction for some cancers. But it is not a universal win: for retrieval it did worse than clinical embeddings alone.
+
+</Note>
+
+## What we learned
+
+The strongest result is also the most TCGA-specific. The dominance of clinical embeddings most likely reflects curated TCGA documentation, where experts have already extracted subtype, stage, grade and molecular markers, condensing information that is spread across the raw imaging, pathology and molecular data. Routine records are messier, and that is where we expect fusion to matter more.
+
+<Note title="Read these results with care" variant="warning">
+
+- **Curated clinical text.** TCGA clinical records are expert-curated summaries, so clinical-embedding results here may not transfer to routine documentation.
+- **Simple slide aggregation.** WSI embeddings are mean-pooled UNI patch features, a baseline rather than a multiple-instance learning model.
+- **Sparse radiology.** Radiology covered 1,149 patients, and radiology embeddings were available for only four cancer types in the survival analysis.
+- **Weak pathology-report survival signal.** Pathology-report embeddings averaged a C-index of about 0.58, suggesting that frozen language-model embeddings may not fully capture the prognostic content of these reports.
+
+</Note>
+
+Two practical lessons came out of the work. First, the right fusion depends on the task: concatenation slightly improved classification and improved survival prediction for some cancers, but it hurt retrieval. Second, for heterogeneous text such as pathology reports, task-specific adaptation mattered more than the choice of encoder: fine-tuning added 7.8 to 12.7 points of accuracy, more than the 6.49-point spread between the four models before fine-tuning.
+
+## Where it goes next
+
+The paper lists three directions: applying HONeYBEE to prospective clinical data, testing embeddings for treatment-response prediction, and adding modalities such as genomics, radiomics and wearable-sensor data. Because embeddings can be generated locally without sharing raw data, the framework could also support federated, multi-institution collaborations.
+
+A real-world evaluation is reported in an AACR Annual Meeting 2026 abstract.[^aacr] We adapted HONeYBEE to routine data from a single NCI-designated cancer center: glioblastoma (n=160), non-small cell lung cancer (n=580) and pancreatic ductal adenocarcinoma (n=171), with 8.2–47% missing data. Using cross-modal attention over HONeYBEE embeddings, the cross-validated C-indices were 0.637 ± 0.087 (GBM), 0.598 ± 0.021 (NSCLC) and 0.679 ± 0.029 (PDAC). Attribution analysis showed different modality mixes by disease: text reports contributed most for GBM (43.7%), imaging for NSCLC (49%), and PDAC was balanced (31–35% per modality).
+
+<Sidenote>These real-world C-indices are lower than the TCGA clinical-embedding results. The cohorts, data and models differ, so the numbers are not directly comparable.</Sidenote>
+
+The framework was the subject of a workshop at the Mayo Clinic AI Summit on July 8, 2025 (Scalable Multimodal AI in Oncology Using HONeYBEE: From Embeddings to Clinical Impact), where I served as a teaching assistant. The HONeYBEE poster won the Best Poster Award at the 2024 Dr. Robert Gillies Machine Learning Workshop in Cancer.
+
+## Resources
+
+The package is on PyPI and the embeddings are on Hugging Face.[^code] To install the framework:
+
+```bash
+pip install honeybee-ml
+python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
+```
+
+In the precomputed TCGA embeddings, each modality is a config and each encoder is a split:
+
+```python
+from datasets import load_dataset
+import numpy as np
+
+clinical = load_dataset("Lab-Rasool/TCGA", "clinical", split="gatortron")
+item = clinical[0]
+embedding = np.frombuffer(item["embedding"], dtype=np.float32).reshape(item["embedding_shape"])
+```
+
+- **Paper:** npj Digital Medicine 8, 622 (2025), open access.[^paper]
+- **Code and docs:** [github.com/lab-rasool/HoneyBee](https://github.com/lab-rasool/HoneyBee) and [lab-rasool.github.io/HoneyBee](https://lab-rasool.github.io/HoneyBee/)
+- **Embeddings:** [Lab-Rasool/TCGA](https://huggingface.co/datasets/Lab-Rasool/TCGA). The paper also points to CGCI, CPTAC, TARGET and Foundation Medicine datasets, collected in the [HONeYBEE collection](https://huggingface.co/collections/Lab-Rasool/honeybee-66b9f15e8b908c4eeeec9cb4).
+- **Raw data tooling:** [MINDS](https://github.com/lab-rasool/MINDS)[^minds]
+
+The paper is a team effort. Asim Waqas (co-first author) led molecular data processing and contributed to the molecular model development, Matthew B. Schabath provided clinical expertise and validated the findings' clinical relevance, Yasin Yilmaz guided algorithm design and statistics, and Ghulam Rasool conceived and supervised the study. The work was supported by NSF Awards 2234836 and 2234468 and NAIRR pilot funding.
+
+[^paper]: Tripathi A, Waqas A, Schabath MB, Yilmaz Y, Rasool G. HONeYBEE: enabling scalable multimodal AI in oncology through foundation model-driven embeddings. *npj Digital Medicine*. 2025;8:622. [doi.org/10.1038/s41746-025-02003-4](https://doi.org/10.1038/s41746-025-02003-4)
+
+[^preprint]: Tripathi A, Waqas A, Schabath MB, Yilmaz Y, Rasool G. HoneyBee: A Scalable Modular Framework for Creating Multimodal Oncology Datasets with Foundational Embedding Models. arXiv:2405.07460, 2024. [arxiv.org/abs/2405.07460](https://arxiv.org/abs/2405.07460)
+
+[^code]: HONeYBEE source code: [github.com/lab-rasool/HoneyBee](https://github.com/lab-rasool/HoneyBee); Python package: [pypi.org/project/honeybee-ml](https://pypi.org/project/honeybee-ml/).
+
+[^data]: Lab Rasool. TCGA multimodal embeddings dataset (GatorTron, Med-Gemma, Qwen, Llama, UNI, SeNMo, REMEDIS and RadImageNet embeddings). [huggingface.co/datasets/Lab-Rasool/TCGA](https://huggingface.co/datasets/Lab-Rasool/TCGA)
+
+[^minds]: Tripathi A, Waqas A, Venkatesan K, Yilmaz Y, Rasool G. Building Flexible, Scalable, and Machine Learning-Ready Multimodal Oncology Datasets. *Sensors*. 2024;24(5):1634. [doi.org/10.3390/s24051634](https://doi.org/10.3390/s24051634)
+
+[^senmo]: Waqas A, Tripathi A, Ahmed S, Mukund A, Farooq H, Johnson JO, Stewart PA, Naeini M, Schabath MB, Rasool G. Self-Normalizing Multi-Omics Neural Network for Pan-Cancer Prognostication. *International Journal of Molecular Sciences*. 2025;26(15):7358. [doi.org/10.3390/ijms26157358](https://doi.org/10.3390/ijms26157358)
+
+[^aacr]: Tripathi AG, Waqas A, Davis EW, Permuth JB, Farinhas J, Yilmaz Y, Schabath MB, Rasool G. Real-world evaluation of multimodal AI: Foundation model-driven multimodal AI for GBM, NSCLC, and PDAC. *Cancer Research*. 2026;86(7 Suppl):1251. AACR Annual Meeting 2026. [doi.org/10.1158/1538-7445.AM2026-1251](https://doi.org/10.1158/1538-7445.AM2026-1251)

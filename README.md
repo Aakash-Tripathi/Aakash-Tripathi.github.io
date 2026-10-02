@@ -1,43 +1,40 @@
-# Aakash Tripathi's Research Portfolio
+# Aakash Tripathi, PhD: research website
 
-Welcome to the portfolio website of Aakash Tripathi, a Ph.D. candidate conducting multimodal medical research at Moffitt Cancer Center. This website showcases my educational background, research interests, publications, and presentations.
+Personal research site built with [Astro](https://astro.build) and deployed to GitHub Pages
+(`.github/workflows/astro.yml`, Node 22). The visual design follows [alexsoupir.com](https://www.alexsoupir.com/):
+black canvas, Archivo headings, Poppins Light body text, white pill buttons, and split page intros. Blog posts use the layout of the Hugging Face
+[research article template](https://huggingface.co/spaces/tfrere/research-article-template): meta bar, sticky
+table of contents, sidenotes, numbered figures, KaTeX math, footnote references, and a BibTeX citation block.
 
-## Project Structure
-
-The project is organized as follows:
-
+```bash
+npm install
+npm run dev      # http://localhost:4321
+npm run build    # static site in dist/
 ```
-├── public
-│   ├── favicon.svg           # Favicon for the website
-│   └── assets
-│       └── profile-photo.jpg # Profile photo of Aakash Tripathi
-├── src
-│   ├── components
-│   │   ├── Education.astro   # Component for the education section
-│   │   ├── Footer.astro      # Component for the footer
-│   │   ├── Header.astro      # Component for the header
-│   │   ├── Navbar.astro      # Component for the navigation bar
-│   │   ├── Publications.astro  # Component for the publications section
-│   │   └── SectionContainer.astro # Wrapper for different sections
-│   ├── layouts
-│   │   ├── Layout.astro      # Main layout for the pages
-│   │   └── PublicationLayout.astro # Layout for the publications page
-│   ├── pages
-│   │   ├── index.astro        # Main landing page
-│   │   ├── publications.astro # Publications page
-│   │   ├── research.astro     # Research interests page
-│   │   └── contact.astro      # Contact information page
-│   ├── data
-│   │   ├── education.js       # Educational background data
-│   │   ├── publications.js    # Publications data
-│   │   └── presentations.js   # Presentations data
-│   └── styles
-│       └── global.css         # Global styles for the website
-├── .github
-│   └── workflows
-│       └── deploy.yml         # GitHub Actions workflow for deployment
-├── astro.config.mjs           # Astro project configuration
-├── package.json               # npm configuration file
-├── tsconfig.json              # TypeScript configuration file
-└── README.md                  # Project documentation
-```
+
+## Pages
+
+| URL | Source | Content |
+| --- | --- | --- |
+| `/` | `src/pages/index.astro` | Hero, image carousel, news, latest posts |
+| `/selected-work/` | `src/pages/selected-work.astro` | Manuscripts, talks, preprints, abstracts |
+| `/software/` | `src/pages/software.astro` | Packages, weights and datasets (built from blog post `links`) |
+| `/competencies/` | `src/pages/competencies.astro` | Skills, peer review, mentoring, memberships |
+| `/talks/` | `src/pages/talks.astro` | Talks, posters and workshops |
+| `/blog/` | `src/pages/blog/*.mdx` | One long-form post per project |
+| `/cv/`, `/contact/` | `src/pages/cv.astro`, `contact.astro` | Full CV and contact details |
+
+## Where things live
+
+- `src/data/cv.js`: all CV content (profile, experience, publications, talks, teaching, skills, news, home gallery).
+- `src/assets/blog/<slug>/`: figures for each post; `cover.(png|jpg)` is the post's hero and card image.
+- `src/assets/gallery/`: talk and poster images used on the home carousel and Talks page.
+- `src/components/article/`: MDX components (`Figure`, `Sidenote`, `Note`, `BarChart`, `Pipeline`, `Stats`).
+
+## Updating
+
+- **CV changes:** edit `src/data/cv.js`. Add `image: 'gallery/<file>'` to a talk to show a photo on the Talks page
+  and home carousel.
+- **New post:** copy a file in `src/pages/blog/`, keep the frontmatter keys, add figures under
+  `src/assets/blog/<slug>/` (with a `cover` image), and credit every reused figure in its caption.
+- The Google Scholar citation count is fetched at build time; the weekly scheduled deploy keeps it fresh.

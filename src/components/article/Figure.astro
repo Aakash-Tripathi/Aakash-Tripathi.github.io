@@ -1,0 +1,66 @@
+---
+// Numbered figure ("Figure N · caption"). `caption` accepts inline HTML.
+// `wide` lets the figure break out of the text column on large screens.
+// Images inside get a white card so paper figures read on the dark theme.
+interface Props {
+  caption?: string;
+  wide?: boolean;
+}
+
+const { caption, wide = false } = Astro.props;
+---
+
+<figure class:list={['figure', { 'figure--wide': wide }]}>
+  <div class="figure__body"><slot /></div>
+  {caption && <figcaption set:html={caption} />}
+</figure>
+
+<style>
+  .figure {
+    margin: 2.2em 0;
+    counter-increment: figure;
+  }
+
+  .figure__body > :global(:last-child) {
+    margin-bottom: 0;
+  }
+
+  .figure__body :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    padding: 14px;
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .figure__body :global(img + img) {
+    margin-top: 12px;
+  }
+
+  figcaption {
+    margin-top: 14px;
+    font-size: 0.86rem;
+    line-height: 1.6;
+    color: var(--muted-color);
+  }
+
+  figcaption::before {
+    content: 'Figure ' counter(figure) ' · ';
+    font-weight: 600;
+    color: var(--heading-color);
+  }
+
+  figcaption :global(a) {
+    color: inherit;
+    text-decoration: underline;
+  }
+
+  /* Wide figures grow into the right-hand margin only, so the sticky TOC on the left stays visible. */
+  @media (min-width: 1180px) {
+    .figure--wide {
+      clear: right;
+      width: calc(100% + 260px);
+    }
+  }
+</style>

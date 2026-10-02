@@ -1,0 +1,318 @@
+---
+layout: ../../layouts/ArticleLayout.astro
+title: "Consensus reasoning with local LLMs for pathology report extraction"
+short: "CLEVER & pathology reports"
+subtitle: "Eleven local LLMs extract, three reasoning models grade, one adjudicates: structured, auditable data from free-text surgical pathology reports."
+description: "How a three-stage consensus of local LLMs extracts registry variables and biomarkers from TCGA and Moffitt pathology reports, and how it grew into CLEVER."
+published: "2025-12-16"
+venue: "Laboratory Investigation"
+role: "First author; developed the LLM workflows"
+doi: "10.1016/j.labinv.2025.104272"
+paperTitle: "Using Consensus-Based Reasoning and Large Language Models to Extract Structured Data From Surgical Pathology Reports"
+authors: ["Aakash Tripathi", "Asim Waqas", "Kavya Venkatesan", "Ehsan Ullah", "Asma Khan", "Farah Khalil", "Wei-Shen Chen", "Zarifa Gahramanli Ozturk", "Daryoush Saeed-Vafa", "Marilyn M. Bui", "Matthew B. Schabath", "Ghulam Rasool"]
+affiliations: ["H. Lee Moffitt Cancer Center & Research Institute, Tampa, FL", "The Ohio State University College of Medicine, Columbus, OH", "University of South Florida, Tampa, FL", "Armed Forces Institute of Pathology, Rawalpindi, Pakistan"]
+links: [{label: "Preprint", url: "https://doi.org/10.1101/2025.04.22.25326217"}, {label: "TCGA-Reports data", url: "https://github.com/tatonetti-lab/tcga-path-reports"}, {label: "The Pathologist", url: "https://www.thepathologist.com/issues/2026/articles/april/ai-tackles-pathology-report-complexity/"}]
+tags: ["large language models", "pathology reports", "information extraction", "cancer registry", "local deployment"]
+order: 2
+citation: "Tripathi A, Waqas A, Venkatesan K, Ullah E, Khan A, Khalil F, et al. Using Consensus-Based Reasoning and Large Language Models to Extract Structured Data From Surgical Pathology Reports. Lab Invest. 2026;106(2):104272. doi:10.1016/j.labinv.2025.104272"
+bibtex: |
+  @article{tripathi2026consensus,
+    title   = {Using Consensus-Based Reasoning and Large Language Models to Extract Structured Data From Surgical Pathology Reports},
+    author  = {Tripathi, Aakash and Waqas, Asim and Venkatesan, Kavya and Ullah, Ehsan and Khan, Asma and Khalil, Farah and Chen, Wei-Shen and Ozturk, Zarifa Gahramanli and Saeed-Vafa, Daryoush and Bui, Marilyn M. and Schabath, Matthew B. and Rasool, Ghulam},
+    journal = {Laboratory Investigation},
+    year    = {2026},
+    volume  = {106},
+    number  = {2},
+    pages   = {104272},
+    doi     = {10.1016/j.labinv.2025.104272}
+  }
+coverAlt: "Three-column diagram of the extraction framework. Stage 1, extraction with justification: TCGA and Moffitt pathology reports plus a prompt go to 11 extraction LLMs (Qwen, Tulu3, Phi4, three DeepSeek-R1 sizes, Llama 3.1, 3.2 and 3.3, Mixtral, Mistral) that return site, laterality, histology, stage, grade and behavior with justifications. Stage 2, automated evaluation: the reports, the extractions and an evaluator prompt go to three reasoning LLMs (DeepSeek-R1 large, Qwen, QwQ) that assign a score to each LLM. Stage 3, aggregation via reasoning: DeepSeek-R1 large produces the final output with explanations, followed by expert validation. Below each stage is a sample output for a bladder urothelial carcinoma report."
+coverCaption: |-
+  The three-stage framework. In stage 1, eleven locally hosted LLMs extract the six variables from each report and justify them; in stage 2, DeepSeek-R1-large, Qwen and QwQ score every prediction 1 or 0 against the report and its justification; in stage 3, DeepSeek-R1-large aggregates the predictions and scores into consensus values with concise rationales, and pathologists review a random sample. Reproduced from <a href='https://doi.org/10.1016/j.labinv.2025.104272'>Tripathi et al. (2026)</a>, <em>Laboratory Investigation</em>, © 2025 USCAP, published by Elsevier; reused under <a href='https://www.elsevier.com/about/policies-and-standards/copyright'>Elsevier author rights</a>.
+---
+
+import Sidenote from '../../components/article/Sidenote.astro';
+import Note from '../../components/article/Note.astro';
+import Figure from '../../components/article/Figure.astro';
+import BarChart from '../../components/article/BarChart.astro';
+import Stats from '../../components/article/Stats.astro';
+import { Image } from 'astro:assets';
+import reportExampleImg from '../../assets/blog/clever/report-example.png';
+import automatedTcgaImg from '../../assets/blog/clever/automated-evaluation-tcga.png';
+import expertEvalImg from '../../assets/blog/clever/expert-evaluation.png';
+import biomarkersImg from '../../assets/blog/clever/biomarkers-moffitt.png';
+
+A surgical pathology report is where a cancer diagnosis is written down: tumor site, laterality, histology, stage, grade and behavior, plus the biomarkers that steer treatment. Cancer registries, trial screening and research cohorts need those values as structured fields; pathologists write them as narrative, in formats that vary by institution, subspecialty and individual habit, with values such as stage often embedded in the prose or spread across sections.
+
+We built and evaluated a consensus-based alternative to asking a single large language model (LLM) for the answer. Eleven open models, all running on local hardware, independently extract six registry variables (and, for one cohort, organ-specific biomarkers) and justify each value. Three reasoning models grade every extraction against the source report, and a final reasoning model adjudicates to one value per field with a written rationale. Board-certified (or equivalent) pathologists then scored samples of the final output.
+
+Across 6,100 reports from The Cancer Genome Atlas (TCGA) and 510 from Moffitt Cancer Center, mean automated accuracy on the six variables was 84.9% ± 7.3% and 88.2% ± 7.2%, pathologists scored the consensus output at 88% to 100% across the reported variables, and biomarkers were harder at 70.6% ± 7.9%.[^paper] I am first author and developed the LLM workflows; Asim Waqas and I designed and implemented the framework and ran the analyses together. Ghulam Rasool supervised as principal investigator. The work continued in CLEVER, the LLM-agent system I went on to develop at Moffitt.
+
+## Why reports resist structure
+
+US surveillance programs such as SEER and the National Program of Cancer Registries require consistent capture of these six fields.[^paper] Rule-based natural language processing can map free text to fields, but such systems are slow to build, sensitive to wording and generalize poorly across cancer types and documentation styles.
+
+<Sidenote>SEER is the Surveillance, Epidemiology, and End Results program. In the extraction prompt shown in the preprint, behavior is restricted to malignant, benign or Unknown.</Sidenote>
+
+LLMs can extract clinical entities with little or no task-specific training, but they also hallucinate: a fabricated stage, a wrong site, an invalid combination of attributes, often stated confidently on weak evidence. In registry abstraction or trial matching, that is risky.
+
+Privacy adds a third constraint: sending protected health information to commercial cloud APIs raises compliance concerns, so every model had to run inside the institutional firewall.
+
+<Sidenote>Minimum GPU memory in the published model table ranges from 8 GB (LLaMA 3.2 3B) to 80 GB (the 70B models and Mixtral) at FP16; several larger models need tensor parallelism across GPUs.</Sidenote>
+
+## A three-stage consensus
+
+Rather than search for one best model, we treated disagreement between models as information, mirroring how diagnostic consensus forms in practice: independent reads, reasoned comparison, reconciliation.
+
+### Stage 1: eleven extractors
+
+Each report goes, in full, to eleven locally hosted models from 3B to 70B parameters, drawn from the LLaMA, Mistral, Qwen, Phi-4, Tulu 3 and DeepSeek-R1 families (full list below). Each returns site, laterality, histology, stage, grade and behavior as JSON, with a brief justification per field. When a value is absent or cannot be inferred, the model must say "Unknown" and explain why. Stage was excluded for brain tumors, where the paper notes it lacks clinical relevance.
+
+For the Moffitt cohort the extractors also read organ-specific biomarkers: ER, PR, HER2 and Ki-67 for breast; IDH1/2, MGMT, ATRX, TP53, 1p/19q codeletion, TERT, EGFR and CDKN2A/B for brain; and PD-L1, EGFR, ALK, ROS1, BRAF, KRAS, MET, RET, HER2 and NTRK for lung.
+
+<details>
+<summary>The full model zoo</summary>
+
+| Label in paper | Base model | Parameters | Stage(s) |
+| --- | --- | --- | --- |
+| LLaMA 3.2-small | Llama 3.2 Instruct | 3B | 1 |
+| Mistral-small | Mistral Instruct v0.3 | 7B | 1 |
+| Qwen-small | Qwen2.5 Instruct | 7B | 1 |
+| Tulu-small | Llama 3.1 Tulu 3 | 8B | 1 |
+| DeepSeek-R1-small | DeepSeek-R1-0528-Qwen3 | 8B | 1 |
+| LLaMA 3.1-small | Llama 3.1 Instruct | 8B | 1 |
+| Phi-medium | Phi-4 | 14B | 1 |
+| DeepSeek-R1-medium | DeepSeek-R1-Distill-Qwen | 32B | 1 |
+| Mixtral-medium | Mixtral Instruct v0.1 | 8x7B | 1 |
+| LLaMA 3.3-large | Llama 3.3 Instruct | 70B | 1 |
+| DeepSeek-R1-large | DeepSeek-R1-Distill-Llama | 70B | 1, 2, 3 |
+| Qwen3-medium | Qwen3 | 32B | 2 |
+| QWQ-medium | QwQ | 32B | 2 |
+
+All models ran at FP16. Stages: 1 extraction, 2 evaluation, 3 aggregation.[^paper]
+
+</details>
+
+### Stage 2: three graders
+
+Every extracted value, together with the justification that produced it, goes to three reasoning models acting as evaluators: DeepSeek-R1-large (70B), Qwen3-32B and QwQ-32B. Each sees the original report and assigns a strict binary score, 1 for correct and 0 for incorrect, based on textual evidence, internal consistency and clinical plausibility. A correct value with an invalid justification does not earn a 1, and "Unknown" is correct only when the report truly lacks the information.[^preprint] Using three evaluators adds diverse perspectives and makes the grading more robust.
+
+### Stage 3: one adjudicator
+
+A second prompt to DeepSeek-R1-large receives the report, all eleven candidates and all evaluator scores, and selects one value per field. Its instructions amount to a filtered majority vote. Writing $\hat{y}_{m,v}$ for model $m$'s answer to variable $v$, and $\mathcal{A}_v$ for the set of extractors whose answer to $v$ was graded correct in stage 2, the target is
+
+$$
+\hat{y}_v \;=\; \arg\max_{y} \sum_{m \in \mathcal{A}_v} \mathbf{1}\!\left[\hat{y}_{m,v} = y\right],
+$$
+
+with ties broken by the source model's overall accuracy, and "Unknown" plus an explanation when $\mathcal{A}_v$ is empty.[^preprint] The aggregator also writes a short rationale per field naming which models contributed.
+
+<Sidenote>The equation is our shorthand for the stage-3 prompt. The aggregator is itself an LLM applying the rule in natural language, not a hard-coded vote, and the paper notes its judgment of justification quality may introduce biases.</Sidenote>
+
+### An auditable record
+
+One JSON record per report keeps the raw candidates, evaluator judgments and final answer side by side. The sketch below abbreviates the preprint's example record for a TCGA lung wedge resection; inner field names are placeholders.[^preprint]
+
+```json
+{
+  "note": "…full report text…",
+  "model_responses": { "phi4": { "site": "…", "justification": "…" }, "…": "…" },
+  "evaluation_…": "…stage-2 judgments from each evaluator…",
+  "final_aggregation_deepseek_r1_70B": {
+    "final_extraction": {
+      "site": "lung",
+      "laterality": "left",
+      "histology": "adenocarcinoma",
+      "stage": "T2NXMX",
+      "grade": "Grade III",
+      "behavior": "malignant"
+    },
+    "rationale": "…which models agreed, and why…"
+  }
+}
+```
+
+A reviewer can read the rationale, see which extractors agreed and check the justification against the report.
+
+<Figure caption="End-to-end artifacts for one TCGA lung resection: the de-identified raw report text (left) and the aggregator's reasoning output (right), which logs the final extraction (site lung, laterality left, histology adenocarcinoma, stage T2NXMX, grade Grade III, behavior malignant) with a rationale noting unanimous or majority agreement among the stage-1 extractors. Reproduced from <a href='https://doi.org/10.1101/2025.04.22.25326217'>Tripathi et al. (2025)</a>, <em>medRxiv</em> preprint v3, <a href='https://creativecommons.org/licenses/by-nc-nd/4.0/'>CC BY-NC-ND 4.0</a>." wide={true}>
+<Image src={reportExampleImg} alt="Two-column table. Left, headed Raw Report Text: the OCR text of a TCGA left upper lobe wedge resection report, including gross description, block summary, and a microscopic description giving invasive poorly differentiated adenocarcinoma, pT2, pNX, pMX. Right, headed Aggregator Model's Reasoning Output: the raw JSON final extraction (lung, left, adenocarcinoma, T2NXMX, Grade III, malignant) followed by a per-field explanation listing which extractor models were selected with score 1 and that all models agreed." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+## Data and evaluation
+
+<Stats items={[
+  {value: '6,100', label: 'TCGA reports across 10 organ sites'},
+  {value: '510', label: 'Moffitt reports: breast, brain, lung'},
+  {value: '11', label: 'local extractor LLMs'},
+  {value: '3', label: 'reasoning evaluators'}
+]} />
+
+**TCGA.** We randomly selected 6,100 reports from the TCGA-Reports corpus released by Jenna Kefeli and Nicholas Tatonetti,[^tcga] covering kidney, breast, lung, uterus, brain, prostate, liver, bladder, cervix and pancreas. For expert review, 138 reports from five organs (bladder, prostate, liver, cervix and kidney) were each scored by three pathologists, 414 evaluations in total.
+
+<Sidenote>TCGA-Reports is a machine-readable text version of TCGA pathology report PDFs produced with optical character recognition, so the stage-1 prompt told models to ignore OCR artifacts.</Sidenote>
+
+**Moffitt.** 510 de-identified surgical pathology reports from patients treated between 2009 and 2018, linked to institutional cancer registry records: breast (215), brain or central nervous system (160) and lung (135). For expert review, 30 reports per organ (90 total) were randomly selected and scored by pathologists including specialists in each organ system. The expert evaluators across both data sets were Ehsan Ullah, Asma Khan, Farah Khalil, Wei-Shen Chen, Zarifa Gahramanli Ozturk, Daryoush Saeed-Vafa and Marilyn Bui.
+
+**Two tiers of scoring.** Automated accuracy is the stage-2 evaluators' binary score, averaged. Expert accuracy scores the stage-3 consensus output as 1 (correct), 0.5 (partially correct) or 0 (incorrect). We compared models, variables and organs with one- to three-way ANOVA and Tukey's HSD tests, and measured inter-evaluator agreement with Pearson and intraclass correlation.
+
+## Results
+
+### Automated accuracy
+
+<Stats items={[
+  {value: '84.9%', label: 'TCGA, six variables (± 7.3%)'},
+  {value: '88.2%', label: 'Moffitt, six variables (± 7.2%)'},
+  {value: '70.6%', label: 'Moffitt biomarkers (± 7.9%)'},
+  {value: '≥ 0.93', label: 'Correlation between evaluators'}
+]} />
+
+On TCGA, histology (88%), site (87%), stage (84%) and behavior (84%) were the best-extracted variables averaged across all models. Phi-4, DeepSeek-R1 70B and 32B, and LLaMA 3.3 were the strongest extractors at 86% or above, while Mixtral, Mistral-7B, the 8B DeepSeek-R1 and LLaMA 3.2 trailed. The three evaluators gave mean scores of 0.88 (DeepSeek-R1-large), 0.85 (Qwen3-32B) and 0.82 (QwQ-32B), with pairwise correlations of 0.94, 0.94 and 0.96.[^paper]
+
+<Figure caption="Automated evaluation of the 6,100 TCGA reports across ten organs. (A) Mean scores from DeepSeek-R1-large, Qwen3-32B and QwQ-32B for each of the eleven extractors (mean accuracy 84.9% ± 7.3%); (B) score distributions for the three evaluators with pairwise Pearson correlations of 0.94, 0.94 and 0.96; (C-E) per-organ accuracy, per-variable accuracy and an organ-by-variable heatmap from each evaluator. Reproduced from <a href='https://doi.org/10.1016/j.labinv.2025.104272'>Tripathi et al. (2026)</a>, <em>Laboratory Investigation</em>, © 2025 USCAP, published by Elsevier; reused under <a href='https://www.elsevier.com/about/policies-and-standards/copyright'>Elsevier author rights</a>." wide={true}>
+<Image src={automatedTcgaImg} alt="Multi-panel results figure. Panel A: grouped horizontal bars of accuracy for eleven extractor models scored by three evaluators, with phi4, deepseek-r1-70b, deepseek-r1-32b and llama3.3 at the top and llama3.2-3b at the bottom. Panel B: violin plots of evaluator scores, means 0.88 for DeepSeek-R1 70B, 0.85 for Qwen 32B and 0.82 for QwQ 32B, with pairwise correlations of 0.94 to 0.96. Panels C to E, one column per evaluator: bar charts of accuracy by organ and by variable, and heatmaps of accuracy for ten organs by six variables." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+Model, variable and organ all mattered (F = 1716.82, 3236.68 and 1946.43, all P &lt; .001), as did their three-way interaction (F = 24.74, P &lt; .001). In plain terms, no single model performed uniformly across variables, and organ-specific language patterns affected accuracy.
+
+<Sidenote>Phi-4 has 14B parameters yet ranked with the 70B models. The paper attributes the clustering to training recipe, such as reasoning and instruction-following post-training, rather than parameter count.</Sidenote>
+
+Moffitt reports scored higher on average, with Phi-4, Tulu 3, DeepSeek-R1 32B, LLaMA 3.3, DeepSeek-R1 70B and LLaMA 3.1 on top and evaluator correlations of 0.934, 0.981 and 0.939. Unlike TCGA, there was no significant model-by-organ or three-way interaction; the paper suggests institution-specific documentation practices may make extraction more consistent.
+
+### Pathologist review
+
+<Figure caption="Pathologist-scored accuracy of the stage-3 consensus output, per variable. TCGA: 138 reports from bladder, prostate, liver, cervix and kidney. Moffitt: 90 reports from brain, breast and lung. Moffitt stage is not reported. Values from the published paper.">
+<BarChart
+  rows={[
+    {label: 'Behavior', value: 100, series: 'TCGA (138 reports)'},
+    {label: 'Behavior', value: 99, series: 'Moffitt (90 reports)'},
+    {label: 'Histology', value: 99, series: 'TCGA (138 reports)'},
+    {label: 'Histology', value: 97, series: 'Moffitt (90 reports)'},
+    {label: 'Grade', value: 96, series: 'TCGA (138 reports)'},
+    {label: 'Grade', value: 94, series: 'Moffitt (90 reports)'},
+    {label: 'Site', value: 95, series: 'TCGA (138 reports)'},
+    {label: 'Site', value: 93, series: 'Moffitt (90 reports)'},
+    {label: 'Laterality', value: 88, series: 'TCGA (138 reports)'},
+    {label: 'Laterality', value: 96, series: 'Moffitt (90 reports)'},
+    {label: 'Stage', value: 89, series: 'TCGA (138 reports)'}
+  ]}
+  series={['TCGA (138 reports)', 'Moffitt (90 reports)']}
+  min={80}
+  max={100}
+  decimals={0}
+  unit="%"
+  mark="dot"
+  axisLabel="Expert accuracy (%), scale 1 / 0.5 / 0"
+/>
+</Figure>
+
+<Figure caption="The paper's expert-evaluation figure. (A) TCGA, 138 reports from kidney, bladder, liver, prostate and cervix: accuracy by variable, by organ and as an organ-by-variable heatmap; (B) Moffitt, 90 reports from breast, brain and lung; (C) a direct comparison of the two data sets on the three organs they share (brain, breast and lung). Reproduced from <a href='https://doi.org/10.1016/j.labinv.2025.104272'>Tripathi et al. (2026)</a>, <em>Laboratory Investigation</em>, © 2025 USCAP, published by Elsevier; reused under <a href='https://www.elsevier.com/about/policies-and-standards/copyright'>Elsevier author rights</a>." wide={true}>
+<Image src={expertEvalImg} alt="Three-column results figure of pathologist-scored accuracy. Column A, TCGA: bars by variable from behavior 1.00 down to stage 0.89 and laterality 0.88; bars by organ from kidney 0.99 to cervix 0.92; and a five-organ by six-variable heatmap whose lowest cells are cervix laterality 0.73 and liver stage 0.71. Column B, Moffitt: bars by variable from behavior 0.99 to site 0.93, by organ (breast 0.99, brain and nervous 0.95, lung 0.94), and a three-organ heatmap. Column C: paired TCGA and Moffitt bars for each variable in brain, breast and lung." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+### Biomarkers
+
+Biomarkers were the hardest task. As Marilyn Bui explained to The Pathologist, results are often spread across comments, ancillary studies, addenda or separate molecular reports, can involve several specimens, assays or time points, and are written in less standardized language.[^pathologist]
+
+<Figure caption="Automated (evaluator-scored) biomarker extraction accuracy on the 510 Moffitt reports, averaged across the eleven extractors. Only biomarkers with values reported in the paper are shown. Overall mean 70.6% ± 7.9%.">
+<BarChart
+  rows={[
+    {label: 'TP53', value: 84, series: 'Brain'},
+    {label: '1p/19q codeletion', value: 77, series: 'Brain'},
+    {label: 'MGMT', value: 75, series: 'Brain'},
+    {label: 'ATRX', value: 73, series: 'Brain'},
+    {label: 'IDH1', value: 71, series: 'Brain'},
+    {label: 'IDH2', value: 67, series: 'Brain'},
+    {label: 'Ki-67', value: 68, series: 'Breast'},
+    {label: 'HER2', value: 63, series: 'Breast'},
+    {label: 'PR', value: 59, series: 'Breast'},
+    {label: 'ER', value: 58, series: 'Breast'},
+    {label: 'ROS1', value: 82, series: 'Lung'},
+    {label: 'KRAS', value: 80, series: 'Lung'},
+    {label: 'PD-L1', value: 70, series: 'Lung'},
+    {label: 'ALK', value: 66, series: 'Lung'},
+    {label: 'EGFR', value: 65, series: 'Lung'}
+  ]}
+  series={['Brain', 'Breast', 'Lung']}
+  min={0}
+  max={100}
+  decimals={0}
+  unit="%"
+  axisLabel="Mean automated accuracy (%)"
+/>
+</Figure>
+
+<Figure caption="Organ-specific biomarker extraction on the 510 Moffitt reports (overall accuracy 70.6% ± 7.9%) for (A) brain, (B) breast and (C) lung: (1) mean accuracy per biomarker, (2) mean score from each AI evaluator and (3) evaluator-by-biomarker heatmaps. Reproduced from <a href='https://doi.org/10.1016/j.labinv.2025.104272'>Tripathi et al. (2026)</a>, <em>Laboratory Investigation</em>, © 2025 USCAP, published by Elsevier; reused under <a href='https://www.elsevier.com/about/policies-and-standards/copyright'>Elsevier author rights</a>." wide={true}>
+<Image src={biomarkersImg} alt="Three-column figure for brain and nervous system, breast, and lung biomarkers. Top row: horizontal accuracy bars, brain from TP53 0.84 to IDH2 0.67, breast from Ki-67 0.68 to ER 0.58, lung from ROS1 0.82 to EGFR 0.65. Middle row: mean score per evaluator, with DeepSeek-R1-70B lowest in every organ (0.58, 0.53, 0.62) and Qwen-32B and QwQ-32B higher. Bottom row: heatmaps of each biomarker by evaluator." widths={[720, 1080, 1600]} sizes="(min-width: 1180px) 1040px, 100vw" />
+</Figure>
+
+The breast panel scored lowest, with ER and PR below 60%. The paper links this to complex reporting formats and multiple specimen types in breast reports.
+
+<Note title="Key takeaway" variant="info">
+
+Combining independent extraction, multi-evaluator grading and reasoned adjudication, locally deployed open models reached pathologist-scored accuracy of 88% to 100% on the reported standard variables in both cohorts, with a rationale for every value. Biomarkers were harder (70.6% automated accuracy).
+
+</Note>
+
+## What we learned
+
+**Many "errors" live in the source.** Pathologists often traced a wrong answer to ambiguous documentation rather than model failure. Laterality was marked wrong where it does not apply (cervix, bladder) or where bilateral disease was described without naming the specimen's side. Stage errors followed mixed staging schemes or incomplete TNM statements. Often the reviewers judged the model's inference clinically plausible.
+
+**Organ-specific failure modes.** In Moffitt breast reports, sentinel node notation such as (sn) or (i-) was dropped from predicted stage. Brain cases tripped on site and laterality when the specimen label differed from the surgical target. In lung and metastatic cases, models sometimes confused the biopsy site (a lymph node or the liver) with the primary site.
+
+**A right answer can have a weak rationale.** Even when values were correct, rationales often failed to highlight the key clinical cues, limiting auditability. The paper suggests rationale filtering.
+
+**Diversity is the point.** As Ghulam Rasool put it to The Pathologist, "no single model performs best across all variables, organs, and reporting styles."[^pathologist]
+
+<Note title="Reading the automated numbers" variant="warning">
+
+Automated accuracy is assigned by LLM evaluators, not by comparison to a human gold standard. The evaluators agreed closely (r ≥ 0.93) but still differed significantly from one another (F = 2633.79, P &lt; .001 on TCGA), and the pathologist review covers only a sample of reports. Treat the expert scores as the clinical check and the automated scores as a scalable proxy.
+
+</Note>
+
+The paper names three limitations. Generalization to rare cancers, atypical document formats and resource-constrained settings is untested. The adjudicator's judgment of justification quality may carry its own biases, especially with ambiguous language. And expert validation was necessarily limited to subsets because manual review is labor-intensive.[^paper]
+
+## From study to CLEVER
+
+<Figure caption="Milestones in the pathology and medical-record extraction work, from published abstracts and talks.">
+
+| When | Milestone |
+| --- | --- |
+| 2024 | Digital Pathology Association oral (first author Ghulam Rasool) on extraction with local and private LLMs |
+| Mar 2025 | USCAP abstract: LLaMA 3, LLaMA 3.1 and Mixtral extract seven variables; LLaMA 3.1 above 84% average accuracy, with a review interface beside the report[^uscap25] |
+| Apr 2025 | Consensus framework posted to medRxiv[^preprint] |
+| Oct 2025 | CLEVER talk on multi-agent, temporal-aware variable extraction (Gillies Machine Learning Workshop) |
+| Dec 2025 | Consensus study published online in *Laboratory Investigation*[^paper] |
+| Mar 2026 | USCAP abstract on multi-agent neuro-oncology biomarker extraction[^uscap26] |
+| Apr 2026 | AACR abstract on social determinants of health[^aacr26]; The Pathologist coverage[^pathologist] |
+
+</Figure>
+
+CLEVER is where this work went next. I developed it at Moffitt as a system that uses LLM agents to extract variables, patient timelines and ICD codes from medical records while retaining document evidence and reasoning for review, and I supported its institution-scale deployment for record processing, variable extraction and document quality review. The principle carries over from the consensus study: keep the evidence and reasoning a reviewer needs.
+
+Two follow-up abstracts apply multi-agent designs to new targets. At USCAP 2026, with Osama Elzaafarany, Sepideh Mokhtari, Michael Vogelbaum, Marilyn Bui and Ghulam Rasool, we described three agents (document assessment, extraction, and per-patient synthesis with confidence scores and evidence citations) run on 42 pathology PDFs from 27 glioblastoma patients. Across nine variables (diagnosis plus eight biomarkers), expert validation against ground-truth annotations gave 83.1% average accuracy; MGMT and PTEN were lowest at 77.8% each, mainly because of OCR noise.[^uscap26] At AACR 2026, Asim Waqas led a study of temporally aware extraction of social determinants of health in two retrospective cohorts: 100 cancer patients with HIV (3,460 documents) and 524 peri-operative pain management patients (15,484 documents), producing time-stamped extractions with evidence provenance.[^aacr26]
+
+## Where it goes next
+
+The paper's own agenda: uncertainty estimation, active learning, more variables such as treatment response and recurrence status, and a pediatric evaluation with synoptic templates curated alongside pediatric pathologists. Prospective validation in live clinical environments, including laboratory information systems and registry pipelines, is the critical next step for measuring effects on accuracy, workflow and downstream decisions.[^paper] Local deployment remains a thread: in June 2026 I co-presented a SIIM Learning Lab with Ghulam Rasool and Asim Waqas on running local LLMs behind institutional firewalls.
+
+## Resources
+
+- **Paper:** *Laboratory Investigation* 2026;106(2):104272, [doi:10.1016/j.labinv.2025.104272](https://doi.org/10.1016/j.labinv.2025.104272). Prompts for all three stages and an example JSON record are in the supplementary material.
+- **Preprint:** [medRxiv 2025.04.22.25326217](https://doi.org/10.1101/2025.04.22.25326217).
+- **Data:** TCGA reports via the [TCGA-Reports repository](https://github.com/tatonetti-lab/tcga-path-reports). The Moffitt data set is not public; access may be requested from the corresponding author, subject to IRB approval and a data use agreement.
+- **Code:** per the paper, the extraction framework and analysis code are available on reasonable request to the corresponding author.
+- **Coverage:** [AI Tackles Pathology Report Complexity](https://www.thepathologist.com/issues/2026/articles/april/ai-tackles-pathology-report-complexity/), The Pathologist, April 8, 2026.
+
+[^paper]: Tripathi A, Waqas A, Venkatesan K, Ullah E, Khan A, Khalil F, Chen WS, Ozturk ZG, Saeed-Vafa D, Bui MM, Schabath MB, Rasool G. Using Consensus-Based Reasoning and Large Language Models to Extract Structured Data From Surgical Pathology Reports. *Laboratory Investigation*. 2026;106(2):104272. Published online December 16, 2025. [https://doi.org/10.1016/j.labinv.2025.104272](https://doi.org/10.1016/j.labinv.2025.104272)
+
+[^preprint]: Tripathi A, Waqas A, Ullah E, et al. Employing Consensus-Based Reasoning with Locally Deployed LLMs for Enabling Structured Data Extraction from Surgical Pathology Reports. *medRxiv*. 2025. Version 1 posted April 25, 2025; version 3 posted November 7, 2025. The stage 1 to 3 prompt descriptions and the example record cited here are from version 3. [https://doi.org/10.1101/2025.04.22.25326217](https://doi.org/10.1101/2025.04.22.25326217)
+
+[^tcga]: Kefeli J, Tatonetti N. TCGA-Reports: A machine-readable pathology report resource for benchmarking text-based AI models. *Patterns*. 2024;5(3):100933. [https://doi.org/10.1016/j.patter.2024.100933](https://doi.org/10.1016/j.patter.2024.100933). Data: [github.com/tatonetti-lab/tcga-path-reports](https://github.com/tatonetti-lab/tcga-path-reports)
+
+[^uscap25]: Tripathi A, Waqas A, Venkatesan K, Ullah E, Bui MM, Rasool G. AI-Driven Extraction of Key Clinical Data from Pathology Reports to Enhance Cancer Registries. Abstract 1391, USCAP 114th Annual Meeting. *Laboratory Investigation*. 2025;105(3 Suppl):103629. [https://doi.org/10.1016/j.labinv.2024.103629](https://doi.org/10.1016/j.labinv.2024.103629)
+
+[^uscap26]: Tripathi A, Elzaafarany O, Mokhtari S, Vogelbaum M, Bui M, Rasool G. Multi-Agent System for Automated Extraction of Neuro-Oncology Biomarkers from Pathology Reports. Abstract 521, USCAP 115th Annual Meeting. *Laboratory Investigation*. 2026;106(3 Suppl):104806. [https://doi.org/10.1016/j.labinv.2025.104806](https://doi.org/10.1016/j.labinv.2025.104806)
+
+[^aacr26]: Waqas A, Tripathi AG, Bowles K, Miner B, Islam JY, Coghill AE, Jones A, Schabath MB, Rasool G. Multi-agent AI orchestration for temporal-aware extraction of social determinants of health from unstructured clinical records in cancer populations. Abstract 26, AACR Annual Meeting 2026. *Cancer Research*. 2026;86(7 Suppl):26. [https://doi.org/10.1158/1538-7445.AM2026-26](https://doi.org/10.1158/1538-7445.AM2026-26)
+
+[^pathologist]: Allerton J. AI Tackles Pathology Report Complexity. *The Pathologist*. April 8, 2026. [https://www.thepathologist.com/issues/2026/articles/april/ai-tackles-pathology-report-complexity/](https://www.thepathologist.com/issues/2026/articles/april/ai-tackles-pathology-report-complexity/)

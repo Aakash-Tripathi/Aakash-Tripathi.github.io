@@ -1,45 +1,77 @@
 ---
+import Icon from './Icon.astro';
+import { links, profile } from '../data/cv.js';
+
+const icons = [
+  { name: 'github', label: 'GitHub', url: links.github },
+  { name: 'huggingface', label: 'Hugging Face', url: links.huggingface },
+  { name: 'scholar', label: 'Google Scholar', url: links.scholar },
+  { name: 'orcid', label: 'ORCID', url: links.orcid },
+  { name: 'linkedin', label: 'LinkedIn', url: links.linkedin },
+  { name: 'email', label: 'Email', url: `mailto:${profile.email}` },
+] as const;
 ---
-<footer class="footer">
-  <div class="container">
-    <div class="footer-content">
-      <p>&copy; {new Date().getFullYear()} Aakash Tripathi. All rights reserved.</p>
-      <div class="social-links">
-        <a href="https://www.linkedin.com/in/aakash-tripathi/" target="_blank">LinkedIn</a>
-        <a href="https://www.researchgate.net/profile/Aakash-Tripathi-2" target="_blank">ResearchGate</a>
-        <a href="https://github.com/lab-rasool" target="_blank">GitHub</a>
-        <a href="https://huggingface.co/Lab-Rasool" target="_blank">Hugging Face</a>
-        <a href="https://orcid.org/0000-0001-7231-0487" target="_blank">ORCID</a>
-        <a href="https://scholar.google.com/citations?user=7X57fGgAAAAJ&hl=en" target="_blank">Google Scholar</a>
-      </div>
-    </div>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <p>&copy; {new Date().getFullYear()} {profile.name}</p>
+    <ul class="footer-links">
+      <li><a href="/contact/">Contact</a></li>
+      {
+        icons.map((i) => (
+          <li>
+            <a
+              class="footer-icon"
+              href={i.url}
+              aria-label={i.label}
+              title={i.label}
+              {...(i.url.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            >
+              <Icon name={i.name} size={16} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
   </div>
 </footer>
 
 <style>
-  .footer {
-    background-color: var(--color-light);
-    padding: 2rem 0;
-    margin-top: 4rem;
+  .site-footer {
+    border-top: 1px solid var(--border-color);
+    font-size: 0.78rem;
   }
 
-  .footer-content {
+  .footer-inner {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
     flex-wrap: wrap;
-    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 24px;
+    padding-top: 22px;
+    padding-bottom: 22px;
   }
 
-  .social-links {
+  p {
+    margin: 0;
+    color: var(--muted-color);
+  }
+
+  .footer-links {
     display: flex;
-    gap: 1rem;
+    align-items: center;
+    gap: 16px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
   }
 
-  @media (max-width: 768px) {
-    .footer-content {
-      flex-direction: column;
-      text-align: center;
-    }
+  .footer-links a {
+    color: #fff;
+  }
+
+  .footer-icon {
+    display: grid;
+    place-items: center;
   }
 </style>
